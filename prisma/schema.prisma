@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  NEW
+  ACCEPTED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  UPI
+  WHATSAPP
+  CASH
+}
+
+enum AdminRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model Cafe {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  logoUrl        String?
+  description    String?
+  themeConfig    Json?
+  whatsappNumber String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  admins     AdminUser[]
+  categories Category[]
+  menuItems  MenuItem[]
+  orders     Order[]
+  payments   Payment[]
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  cafeId       String
+  name         String
+  email        String    @unique
+  passwordHash String?
+  role         AdminRole @default(STAFF)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  cafeId    String
+  name      String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cafe  Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  items MenuItem[]
+
+  @@unique([cafeId, name])
+  @@index([cafeId, active])
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  cafeId      String
+  categoryId  String
+  name        String
+  description String?
+  imageUrl    String?
+  price       Int
+  available   Boolean  @default(true)
+  featured    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cafe       Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([cafeId, available])
+  @@index([categoryId, available])
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  cafeId        String
+  customerName  String
+  customerPhone String
+  totalAmount   Int
+  orderStatus   OrderStatus   @default(NEW)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentId     String?
+  paymentMethod PaymentMethod
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  cafe     Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([cafeId, createdAt])
+  @@index([cafeId, orderStatus])
+  @@index([cafeId, paymentStatus])
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  menuItemId String?
+  itemName   String
+  unitPrice  Int
+  quantity   Int
+  totalPrice Int
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  cafeId           String
+  orderId          String
+  gateway          String
+  gatewayOrderId   String?
+  gatewayPaymentId String?
+  amount           Int
+  status           PaymentStatus @default(PENDING)
+  rawResponse      Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  cafe  Cafe  @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([gateway, gatewayOrderId])
+  @@index([cafeId, status])
+  @@index([orderId])
+}
