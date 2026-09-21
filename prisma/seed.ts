@@ -12,6 +12,15 @@ async function main() {
       description: 'Small-batch roast · scan, sip, stay a while',
       whatsappNumber: '+919876543210',
       active: true,
+      themeConfig: {
+    primaryColor: '#C66A3D',
+    backgroundColor: '#F8F3EC',
+    surfaceColor: '#FFFFFF',
+    textColor: '#2B211B',
+    mutedColor: '#776B61',
+    accentColor: '#E4B85C',
+    successColor: '#6D9275',
+  },
     },
     create: {
       name: 'Kettle & Bean',
@@ -20,9 +29,14 @@ async function main() {
       whatsappNumber: '+919876543210',
       active: true,
       themeConfig: {
-        primaryColor: '#EAC26B',
-        backgroundColor: '#19322B',
-      },
+  primaryColor: '#C66A3D',
+  backgroundColor: '#F8F3EC',
+  surfaceColor: '#FFFFFF',
+  textColor: '#2B211B',
+  mutedColor: '#776B61',
+  accentColor: '#E4B85C',
+  successColor: '#6D9275',
+},
     },
   });
 
