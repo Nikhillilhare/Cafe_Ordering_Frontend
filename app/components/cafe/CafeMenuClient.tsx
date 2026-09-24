@@ -10,6 +10,7 @@ import CartBar from './CartBar';
 import type { CategoryData, ThemeData } from './types';
 
 type CafeMenuClientProps = {
+  cafeSlug: string;
   cafeName: string;
   description: string | null;
   categories: CategoryData[];
@@ -17,6 +18,7 @@ type CafeMenuClientProps = {
 };
 
 export default function CafeMenuClient({
+  cafeSlug,
   cafeName,
   description,
   categories,
@@ -26,6 +28,11 @@ export default function CafeMenuClient({
   const [activeCategoryId, setActiveCategoryId] = useState('all');
   const [cart, setCart] = useState<Record<string, number>>({});
   const [showCart, setShowCart] = useState(false);
+
+  const [customerName, setCustomerName] = useState('');
+const [customerPhone, setCustomerPhone] = useState('');
+const [isSubmitting, setIsSubmitting] = useState(false);
+const [orderMessage, setOrderMessage] = useState('');
 
   const themeStyle = {
     '--background-color': theme.backgroundColor ?? '#A54CB2',
@@ -104,6 +111,57 @@ export default function CafeMenuClient({
     (total, item) => total + item.price * (cart[item.id] ?? 0),
     0,
   );
+
+  const submitOrder = async () => {
+  setOrderMessage('');
+
+  if (!customerName.trim() || !customerPhone.trim()) {
+    setOrderMessage('Please enter your name and mobile number.');
+    return;
+  }
+
+  if (cartItems.length === 0) {
+    setOrderMessage('Please add at least one item.');
+    return;
+  }
+
+  try {
+    setIsSubmitting(true);
+
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        cafeSlug,
+        customerName,
+        customerPhone,
+        items: cartItems.map((item) => ({
+          menuItemId: item.id,
+          quantity: cart[item.id],
+        })),
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setOrderMessage(result.error ?? 'Unable to create order.');
+      return;
+    }
+
+    setOrderMessage(
+      `Order created successfully. Order ID: ${result.orderId}`,
+    );
+
+    setCart({});
+  } catch {
+    setOrderMessage('Something went wrong. Please try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <main
@@ -208,19 +266,39 @@ export default function CafeMenuClient({
                 Rs. {cartTotal}
               </span>
             </div>
+              <div className="mt-6 space-y-3">
+  <input
+    type="text"
+    value={customerName}
+    onChange={(event) => setCustomerName(event.target.value)}
+    placeholder="Your name"
+    className="w-full rounded-xl border border-black/10 px-4 py-3 outline-none"
+  />
 
+  <input
+    type="tel"
+    value={customerPhone}
+    onChange={(event) => setCustomerPhone(event.target.value)}
+    placeholder="Mobile number"
+    className="w-full rounded-xl border border-black/10 px-4 py-3 outline-none"
+  />
+</div>
             <button
-              className="mt-6 w-full rounded-2xl px-5 py-4 font-bold text-white"
-              style={{
-                backgroundColor: 'var(--primary-color)',
-              }}
-              onClick={() => {
-                setShowCart(false);
-                alert('Customer details step will be added next.');
-              }}
-            >
-              Continue to order
-            </button>
+  className="mt-6 w-full rounded-2xl px-5 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+  style={{
+    backgroundColor: 'var(--primary-color)',
+  }}
+  onClick={submitOrder}
+  disabled={isSubmitting}
+>
+  {isSubmitting ? 'Creating order...' : 'Place order'}
+</button>
+
+{orderMessage && (
+  <p className="mt-4 text-center text-sm text-[var(--muted-color)]">
+    {orderMessage}
+  </p>
+)}
           </div>
         </div>
       )}

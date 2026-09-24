@@ -66,6 +66,7 @@ export default async function CafePage({ params }: CafePageProps) {
 
   return (
     <CafeMenuClient
+      cafeSlug={slug}
       cafeName={cafe.name}
       description={cafe.description}
       categories={categories}
