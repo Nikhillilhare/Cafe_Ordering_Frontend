@@ -31,6 +31,8 @@ export default function CafeMenuClient({
 
   const [customerName, setCustomerName] = useState('');
 const [customerPhone, setCustomerPhone] = useState('');
+const [paymentMethod, setPaymentMethod] = useState<
+  'WHATSAPP' | 'UPI'>('WHATSAPP');
 const [isSubmitting, setIsSubmitting] = useState(false);
 const [orderMessage, setOrderMessage] = useState('');
 
@@ -266,7 +268,7 @@ const [orderMessage, setOrderMessage] = useState('');
                 Rs. {cartTotal}
               </span>
             </div>
-              <div className="mt-6 space-y-3">
+         <div className="mt-6 space-y-3">
   <input
     type="text"
     value={customerName}
@@ -282,6 +284,48 @@ const [orderMessage, setOrderMessage] = useState('');
     placeholder="Mobile number"
     className="w-full rounded-xl border border-black/10 px-4 py-3 outline-none"
   />
+
+  <p className="pt-2 text-sm font-semibold">
+    Choose payment/order method
+  </p>
+
+  <div className="grid grid-cols-2 gap-3">
+    <button
+      type="button"
+      onClick={() => setPaymentMethod('WHATSAPP')}
+      className="rounded-xl border px-4 py-3 text-sm font-bold"
+      style={{
+        backgroundColor:
+          paymentMethod === 'WHATSAPP'
+            ? 'var(--success-color)'
+            : 'transparent',
+        color:
+          paymentMethod === 'WHATSAPP'
+            ? '#FFFFFF'
+            : 'var(--text-color)',
+      }}
+    >
+      WhatsApp
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setPaymentMethod('UPI')}
+      className="rounded-xl border px-4 py-3 text-sm font-bold"
+      style={{
+        backgroundColor:
+          paymentMethod === 'UPI'
+            ? 'var(--primary-color)'
+            : 'transparent',
+        color:
+          paymentMethod === 'UPI'
+            ? '#FFFFFF'
+            : 'var(--text-color)',
+      }}
+    >
+      Pay by UPI
+    </button>
+  </div>
 </div>
             <button
   className="mt-6 w-full rounded-2xl px-5 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
