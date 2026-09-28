@@ -1,9 +1,8 @@
-import { descriptor } from '../../../node_modules/effect/src/internal/core-effect';
 export type MenuItemData ={
     id:string;
     categoryId:string;
     name:string;
-    description:string|null;
+    description:string | null;
     price: number;
     feature: boolean;
 };
