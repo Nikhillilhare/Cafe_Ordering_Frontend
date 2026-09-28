@@ -12,6 +12,7 @@ import type { CategoryData, ThemeData } from './types';
 type CafeMenuClientProps = {
   cafeSlug: string;
   cafeName: string;
+  whatsappNumber:string | null;
   description: string | null;
   categories: CategoryData[];
   theme: ThemeData;
@@ -20,6 +21,7 @@ type CafeMenuClientProps = {
 export default function CafeMenuClient({
   cafeSlug,
   cafeName,
+  whatsappNumber,
   description,
   categories,
   theme,
@@ -153,9 +155,43 @@ const [orderMessage, setOrderMessage] = useState('');
       return;
     }
 
+    if(paymentMethod === 'WHATSAPP'){
+      if(!whatsappNumber){
+        setOrderMessage('WhatsApp number is not configured for this cafe.');
+        return;
+      }
+
+      const cleanWhatsAppNumber = whatsappNumber.replace(/\D/g,'',);
+
+      const itemLines = cartItems.map((item)=>{
+        const quantity = cart[item.id] ?? 0;
+        const itemTotal = item.price * quantity;
+        return `${item.name} x ${quantity} = Rs. ${itemTotal}`;
+      });
+
+      const message = [
+        `Hello ${cafeName},`,
+        '',
+        'I would like to place this order:','',
+        `Order ID: ${result.orderId}`,
+        `Customer: ${customerName}`,
+        `Phone: ${customerPhone}`,'',
+        ...itemLines,'',
+        `Total: Rs. ${result.totalAmount}`,
+      ].join('\n');
+
+      const whatsappUrl= `https://wa.me/${cleanWhatsAppNumber}`+ `?text=${encodeURIComponent(message)}`;
+      setCart({});
+      setShowCart(false);
+      window.location.assign(whatsappUrl);
+      return;
+    }
+
+    if(paymentMethod === 'UPI'){    
     setOrderMessage(
-      `Order created successfully. Order ID: ${result.orderId}`,
+      `Order ID: ${result.orderId} created. UPI payment integration is the next step.`,
     );
+  }
 
     setCart({});
   } catch {

@@ -46,6 +46,10 @@ export default async function CafePage({ params }: CafePageProps) {
   if (!cafe || !cafe.active) {
     notFound();
   }
+  console.log(
+  'WhatsApp number received from database:',
+  cafe.whatsappNumber,
+);
 
   const categories: CategoryData[] = cafe.categories.map((category) => ({
     id: category.id,
@@ -68,6 +72,7 @@ export default async function CafePage({ params }: CafePageProps) {
     <CafeMenuClient
       cafeSlug={slug}
       cafeName={cafe.name}
+      whatsappNumber={cafe.whatsappNumber}
       description={cafe.description}
       categories={categories}
       theme={theme}

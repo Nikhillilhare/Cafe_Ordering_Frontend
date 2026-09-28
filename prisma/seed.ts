@@ -10,7 +10,7 @@ async function main() {
     update: {
       name: 'Kettle & Bean',
       description: 'Small-batch roast · scan, sip, stay a while',
-      whatsappNumber: '+919876543210',
+      whatsappNumber: '+919168561804',
       active: true,
       themeConfig: {
     primaryColor: '#C66A3D',
@@ -26,7 +26,7 @@ async function main() {
       name: 'Kettle & Bean',
       slug: 'kettle-bean',
       description: 'Small-batch roast · scan, sip, stay a while',
-      whatsappNumber: '+919876543210',
+      whatsappNumber: '+919168561804',
       active: true,
       themeConfig: {
   primaryColor: '#C66A3D',
