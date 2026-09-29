@@ -17,6 +17,8 @@ import { buildWhatsAppOrderUrl } from "@/lib/whatsapp/buildWhatsAppOrderUrl";
 
 import type { CategoryData, ThemeData } from "./types";
 
+import { createPaymentSession } from "@/lib/client/payments";
+
 type CartStep = "cart" | "checkout" | "confirmation";
 
 type CafeMenuClientProps = {
@@ -42,6 +44,9 @@ export default function CafeMenuClient({
   const [showCart, setShowCart] = useState(false);
   const [cartStep, setCartStep] = useState<CartStep>("cart");
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isStartingPayment, setIsStartingPayment] = useState(false);
 
   const themeStyle = {
     "--background-color": theme.backgroundColor ?? "#f8f3ec",
@@ -127,6 +132,8 @@ export default function CafeMenuClient({
     items: checkoutItems,
   });
 
+  const checkoutBusy = isSubmitting || isStartingPayment;
+
   function addItem(itemId: string) {
     setCart((currentCart) => {
       const currentQuantity = currentCart[itemId] ?? 0;
@@ -164,12 +171,13 @@ export default function CafeMenuClient({
   function openCart() {
     resetCheckout();
     setWhatsappUrl(null);
+    setPaymentError(null);
     setCartStep("cart");
     setShowCart(true);
   }
 
   function closeCart() {
-    if (isSubmitting) {
+    if (checkoutBusy) {
       return;
     }
 
@@ -281,18 +289,78 @@ export default function CafeMenuClient({
      * Real payment gateway is not connected yet.
      * UPI orders are created as PENDING and confirmation is shown.
      */
-    whatsappWindow?.close();
-    setWhatsappUrl(null);
-    setCartStep("confirmation");
-    clearCart();
+    /*
+
+ * Pay Online flow:
+ *
+ * Order already exists, so now create a separate
+ * Payment record and mock checkout session.
+ */
+whatsappWindow?.close();
+setWhatsappUrl(null);
+setPaymentError(null);
+setIsStartingPayment(true);
+
+try {
+  const paymentSession = await createPaymentSession(order.orderId);
+
+  clearCart();
+
+  window.location.assign(paymentSession.checkoutUrl);
+} catch (caughtError) {
+  const message =
+    caughtError instanceof Error
+      ? caughtError.message
+      : "Unable to open the payment checkout.";
+
+  setPaymentError(message);
+  setCartStep("confirmation");
+  clearCart();
+} finally {
+  setIsStartingPayment(false);
+}
   }
 
-  function handleBackToMenu() {
-    setShowCart(false);
-    setCartStep("cart");
-    setWhatsappUrl(null);
-    resetCheckout();
+  async function handleRetryPayment() {
+  if (
+    !createdOrder ||
+    createdOrder.paymentMethod !== "UPI" ||
+    isStartingPayment
+  ) {
+    return;
   }
+
+  setIsStartingPayment(true);
+  setPaymentError(null);
+
+  try {
+    /*
+     * The backend reuses an existing pending payment,
+     * so this does not create duplicate payment attempts.
+     */
+    const paymentSession = await createPaymentSession(
+      createdOrder.orderId,
+    );
+
+    window.location.assign(paymentSession.checkoutUrl);
+  } catch (caughtError) {
+    setPaymentError(
+      caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to open the payment checkout.",
+    );
+  } finally {
+    setIsStartingPayment(false);
+  }
+}
+
+ function handleBackToMenu() {
+  setShowCart(false);
+  setCartStep("cart");
+  setWhatsappUrl(null);
+  setPaymentError(null);
+  resetCheckout();
+}
 
   return (
     <main
@@ -384,7 +452,7 @@ export default function CafeMenuClient({
               <button
                 type="button"
                 onClick={closeCart}
-                disabled={isSubmitting}
+                disabled={checkoutBusy}
                 aria-label="Close cart"
                 className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-[var(--muted-color)] transition hover:bg-black/5 disabled:opacity-50"
               >
@@ -487,21 +555,28 @@ export default function CafeMenuClient({
             )}
 
             {cartStep === "checkout" && (
-              <CheckoutForm
+          <CheckoutForm
                 totalAmount={cartTotal}
-                isSubmitting={isSubmitting}
-                serverError={checkoutError}
+                isSubmitting={checkoutBusy}
+                serverError={checkoutError || paymentError}
                 onSubmit={handleCheckoutSubmit}
                 onBack={() => setCartStep("cart")}
-              />
+          />
             )}
 
             {cartStep === "confirmation" && createdOrder && (
               <OrderConfirmation
-                order={createdOrder}
-                whatsappUrl={whatsappUrl}
-                onBackToMenu={handleBackToMenu}
-              />
+  order={createdOrder}
+  whatsappUrl={whatsappUrl}
+  paymentError={paymentError}
+  isRetryingPayment={isStartingPayment}
+  onRetryPayment={
+    createdOrder.paymentMethod === "UPI"
+      ? handleRetryPayment
+      : undefined
+  }
+  onBackToMenu={handleBackToMenu}
+/>
             )}
           </div>
         </div>

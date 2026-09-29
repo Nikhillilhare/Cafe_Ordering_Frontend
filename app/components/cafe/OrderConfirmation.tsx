@@ -5,6 +5,9 @@ import type { CreateOrderResponse } from "@/lib/client/orders";
 type OrderConfirmationProps = {
   order: CreateOrderResponse;
   whatsappUrl?: string | null;
+  paymentError?: string | null;
+  isRetryingPayment?: boolean;
+  onRetryPayment?: () => void | Promise<void>;
   onBackToMenu?: () => void;
 };
 
@@ -19,9 +22,13 @@ function getShortOrderId(orderId: string): string {
 export default function OrderConfirmation({
   order,
   whatsappUrl,
+  paymentError,
+  isRetryingPayment = false,
+  onRetryPayment,
   onBackToMenu,
 }: OrderConfirmationProps) {
   const isWhatsAppOrder = order.paymentMethod === "WHATSAPP";
+  const isOnlinePayment = order.paymentMethod === "UPI";
 
   return (
     <section className="space-y-6 text-center">
@@ -36,7 +43,9 @@ export default function OrderConfirmation({
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold">Order created successfully</h2>
+        <h2 className="text-2xl font-bold">
+          Order created successfully
+        </h2>
 
         <p
           className="mt-2 text-sm"
@@ -149,19 +158,59 @@ export default function OrderConfirmation({
         </div>
       )}
 
-      {!isWhatsAppOrder && (
+      {isWhatsAppOrder && !whatsappUrl && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-left text-sm text-amber-800">
-          Online payment is currently running in demo mode. The real payment
-          gateway will be connected after the required merchant credentials are
-          provided.
+          The order was saved, but the cafe WhatsApp number is unavailable.
+          Please contact the cafe directly.
+        </div>
+      )}
+
+      {isOnlinePayment && (
+        <div className="space-y-4">
+          {paymentError ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-red-300 bg-red-50 p-4 text-left text-sm text-red-700"
+            >
+              <p className="font-semibold">
+                Payment checkout could not be opened
+              </p>
+
+              <p className="mt-1">{paymentError}</p>
+
+              <p className="mt-2">
+                Your order is already saved. Retry payment without creating a
+                new order.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-blue-300 bg-blue-50 p-4 text-left text-sm text-blue-700">
+              Your order is saved. Continue to the mock payment checkout to
+              complete the payment demonstration.
+            </div>
+          )}
+
+          {onRetryPayment && (
+            <button
+              type="button"
+              disabled={isRetryingPayment}
+              onClick={() => void onRetryPayment()}
+              className="w-full rounded-full bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isRetryingPayment
+                ? "Opening payment checkout…"
+                : "Continue to payment"}
+            </button>
+          )}
         </div>
       )}
 
       {onBackToMenu && (
         <button
           type="button"
+          disabled={isRetryingPayment}
           onClick={onBackToMenu}
-          className="w-full rounded-full border px-6 py-3 font-semibold"
+          className="w-full rounded-full border px-6 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           style={{
             borderColor: "var(--primary-color, #c66a3d)",
             color: "var(--primary-color, #c66a3d)",
