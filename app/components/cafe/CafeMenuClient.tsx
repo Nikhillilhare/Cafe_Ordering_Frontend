@@ -12,7 +12,7 @@ import CheckoutForm, {
 } from "./CheckoutForm";
 import OrderConfirmation from "./OrderConfirmation";
 
-import { useCheckout } from "@/app/components/hooks/useCheckout";
+import { useCheckout } from "@/hooks/useCheckout";
 import { buildWhatsAppOrderUrl } from "@/lib/whatsapp/buildWhatsAppOrderUrl";
 
 import type { CategoryData, ThemeData } from "./types";

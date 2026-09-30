@@ -69,6 +69,11 @@ async function main() {
     },
   });
 
+  console.log(`Admin email: ${admin.email}`);console.log("Seed data inserted successfully.");
+console.log(`Cafe: ${cafe.name}`);
+console.log(`Slug: ${cafe.slug}`);
+console.log(`Admin email: ${admin.email}`);
+
   const hotCoffee = await prisma.category.upsert({
     where: {
       cafeId_name: {
@@ -303,13 +308,15 @@ async function main() {
       "SEED_ADMIN_PASSWORD must contain at least 8 characters.",
     );
   }
+  
 main()
+
   .catch((error) => {
     console.error('Seed failed:', error);
     process.exit(1);
+    
   })
   .finally(async () => {
     await prisma.$disconnect();
+    
   });
-
-  
