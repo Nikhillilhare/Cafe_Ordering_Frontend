@@ -1,5 +1,8 @@
-import { PrismaClient } from '@prisma/client';
-
+import bcrypt from "bcryptjs";
+import {
+  AdminRole,
+  PrismaClient,
+} from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
@@ -37,6 +40,32 @@ async function main() {
   accentColor: '#E4B85C',
   successColor: '#6D9275',
 },
+    },
+  });
+
+    const adminPasswordHash = await bcrypt.hash(
+    adminPassword,
+    12,
+  );
+
+  const admin = await prisma.adminUser.upsert({
+    where: {
+      email: adminEmail,
+    },
+
+    update: {
+      cafeId: cafe.id,
+      name: adminName,
+      passwordHash: adminPasswordHash,
+      role: AdminRole.OWNER,
+    },
+
+    create: {
+      cafeId: cafe.id,
+      name: adminName,
+      email: adminEmail,
+      passwordHash: adminPasswordHash,
+      role: AdminRole.OWNER,
     },
   });
 
@@ -238,6 +267,42 @@ async function main() {
   console.log(`Slug: ${cafe.slug}`);
 }
 
+   const adminEmailValue = process.env.SEED_ADMIN_EMAIL;
+  const adminPasswordValue = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!adminEmailValue) {
+    throw new Error(
+      "SEED_ADMIN_EMAIL must be configured in .env.",
+    );
+  }
+
+  if (!adminPasswordValue) {
+    throw new Error(
+      "SEED_ADMIN_PASSWORD must be configured in .env.",
+    );
+  }
+
+  const adminEmail: string = adminEmailValue
+    .trim()
+    .toLowerCase();
+
+  const adminPassword: string = adminPasswordValue;
+
+  const adminName: string =
+    process.env.SEED_ADMIN_NAME?.trim() ||
+    "Kettle & Bean Owner";
+
+  if (!adminEmail.includes("@")) {
+    throw new Error(
+      "SEED_ADMIN_EMAIL must be a valid email address.",
+    );
+  }
+
+  if (adminPassword.length < 8) {
+    throw new Error(
+      "SEED_ADMIN_PASSWORD must contain at least 8 characters.",
+    );
+  }
 main()
   .catch((error) => {
     console.error('Seed failed:', error);
@@ -246,3 +311,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+  
