@@ -1,11 +1,10 @@
 "use client";
+
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
+import { motion } from "motion/react";
 import {
-  motion,
-  type Variants,
-} from "motion/react";
-import {
+  CheckCircle2,
   ChevronRight,
   Clock3,
   CreditCard,
@@ -14,9 +13,17 @@ import {
   Search,
   UserRound,
   X,
+  XCircle,
 } from "lucide-react";
 
 import { useHydratedReducedMotion } from "@/hooks/useHydratedReducedMotion";
+import {
+  markManualPaymentPaid,
+  updateAdminOrderStatus,
+  type AdminOrderData,
+  type AdminOrderStatus,
+  type AdminPaymentStatus,
+} from "@/lib/client/adminOrders";
 
 const AdminOrderDetailsDrawer = dynamic(
   () => import("./AdminOrderDetailsDrawer"),
@@ -24,14 +31,6 @@ const AdminOrderDetailsDrawer = dynamic(
     ssr: false,
   },
 );
-
-import {  
-  markManualPaymentPaid,
-  updateAdminOrderStatus,
-  type AdminOrderData,
-  type AdminOrderStatus,
-  type AdminPaymentStatus,
-} from "@/lib/client/adminOrders";
 
 type AdminOrdersClientProps = {
   initialOrders: AdminOrderData[];
@@ -59,33 +58,6 @@ const paymentStatusOptions: PaymentStatusFilter[] = [
   "CANCELLED",
   "REFUNDED",
 ];
-
-const orderContainerVariants: Variants = {
-  hidden: {},
-
-  visible: {
-    transition: {
-      staggerChildren: 0.045,
-    },
-  },
-};
-
-const orderItemVariants: Variants = {
-  hidden: {
-    opacity: 0,
-    y: 14,
-  },
-
-  visible: {
-    opacity: 1,
-    y: 0,
-
-    transition: {
-      duration: 0.32,
-      ease: "easeOut",
-    },
-  },
-};
 
 function formatCurrency(amount: number): string {
   return `₹${amount.toLocaleString("en-IN")}`;
@@ -118,44 +90,48 @@ function getShortOrderId(orderId: string): string {
   return orderId.slice(-8).toUpperCase();
 }
 
+function getInitial(name: string): string {
+  return name.trim().charAt(0).toUpperCase() || "C";
+}
+
 function getOrderStatusClasses(status: string): string {
   switch (status) {
     case "COMPLETED":
-      return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300";
+      return "bg-emerald-100 text-emerald-700";
 
     case "READY":
-      return "border-cyan-400/20 bg-cyan-500/10 text-cyan-300";
+      return "bg-sky-100 text-sky-700";
 
     case "PREPARING":
-      return "border-amber-400/20 bg-amber-500/10 text-amber-300";
-
-    case "CANCELLED":
-      return "border-rose-400/20 bg-rose-500/10 text-rose-300";
+      return "bg-blue-100 text-blue-700";
 
     case "ACCEPTED":
-      return "border-violet-400/20 bg-violet-500/10 text-violet-300";
+      return "bg-violet-100 text-violet-700";
+
+    case "CANCELLED":
+      return "bg-rose-100 text-rose-700";
 
     default:
-      return "border-indigo-400/20 bg-indigo-500/10 text-indigo-300";
+      return "bg-orange-100 text-orange-700";
   }
 }
 
 function getPaymentStatusClasses(status: string): string {
   switch (status) {
     case "PAID":
-      return "bg-emerald-500/10 text-emerald-300";
+      return "bg-emerald-100 text-emerald-700";
 
     case "FAILED":
-      return "bg-rose-500/10 text-rose-300";
+      return "bg-rose-100 text-rose-700";
 
     case "CANCELLED":
-      return "bg-amber-500/10 text-amber-300";
+      return "bg-orange-100 text-orange-700";
 
     case "REFUNDED":
-      return "bg-violet-500/10 text-violet-300";
+      return "bg-slate-100 text-slate-600";
 
     default:
-      return "bg-slate-500/10 text-slate-400";
+      return "bg-amber-100 text-amber-700";
   }
 }
 
@@ -169,6 +145,7 @@ export default function AdminOrdersClient({
     useState<AdminOrderData[]>(initialOrders);
 
   const [search, setSearch] = useState("");
+
   const [orderStatusFilter, setOrderStatusFilter] =
     useState<OrderStatusFilter>("ALL");
 
@@ -182,15 +159,35 @@ export default function AdminOrdersClient({
     useState<string | null>(null);
 
   const [
-  updatingPaymentOrderId,
-  setUpdatingPaymentOrderId,
-] = useState<string | null>(null);  
+    updatingPaymentOrderId,
+    setUpdatingPaymentOrderId,
+  ] = useState<string | null>(null);
 
   const [drawerError, setDrawerError] =
     useState<string | null>(null);
 
+  const statistics = useMemo(() => {
+    return {
+      total: orders.length,
+
+      paid: orders.filter(
+        (order) => order.paymentStatus === "PAID",
+      ).length,
+
+      pending: orders.filter(
+        (order) => order.paymentStatus === "PENDING",
+      ).length,
+
+      cancelled: orders.filter(
+        (order) => order.orderStatus === "CANCELLED",
+      ).length,
+    };
+  }, [orders]);
+
   const filteredOrders = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch = search
+      .trim()
+      .toLowerCase();
 
     return orders.filter((order) => {
       const matchesSearch =
@@ -230,8 +227,9 @@ export default function AdminOrdersClient({
   ]);
 
   const selectedOrder =
-    orders.find((order) => order.id === selectedOrderId) ??
-    null;
+    orders.find(
+      (order) => order.id === selectedOrderId,
+    ) ?? null;
 
   const filtersActive =
     search.trim() !== "" ||
@@ -250,7 +248,10 @@ export default function AdminOrdersClient({
   }
 
   function closeOrder() {
-    if (updatingOrderId || updatingPaymentOrderId) {
+    if (
+      updatingOrderId ||
+      updatingPaymentOrderId
+    ) {
       return;
     }
 
@@ -261,7 +262,11 @@ export default function AdminOrdersClient({
   async function handleUpdateStatus(
     status: AdminOrderStatus,
   ) {
-    if (!selectedOrder || updatingOrderId) {
+    if (
+      !selectedOrder ||
+      updatingOrderId ||
+      updatingPaymentOrderId
+    ) {
       return;
     }
 
@@ -275,22 +280,23 @@ export default function AdminOrdersClient({
       );
 
       const updatedAt =
-        response.order.updatedAt ?? new Date().toISOString();
+        response.order.updatedAt ??
+        new Date().toISOString();
 
-      setOrders((currentOrders) => {
-        return currentOrders.map((order) => {
-          if (order.id !== selectedOrder.id) {
-            return order;
-          }
-
-          return {
-            ...order,
-            orderStatus: response.order.orderStatus,
-            paymentStatus: response.order.paymentStatus,
-            updatedAt,
-          };
-        });
-      });
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === selectedOrder.id
+            ? {
+                ...order,
+                orderStatus:
+                  response.order.orderStatus,
+                paymentStatus:
+                  response.order.paymentStatus,
+                updatedAt,
+              }
+            : order,
+        ),
+      );
     } catch (caughtError) {
       setDrawerError(
         caughtError instanceof Error
@@ -303,91 +309,168 @@ export default function AdminOrdersClient({
   }
 
   async function handleMarkPaymentPaid() {
-  if (
-    !selectedOrder ||
-    updatingOrderId ||
-    updatingPaymentOrderId
-  ) {
-    return;
+    if (
+      !selectedOrder ||
+      updatingOrderId ||
+      updatingPaymentOrderId
+    ) {
+      return;
+    }
+
+    setUpdatingPaymentOrderId(selectedOrder.id);
+    setDrawerError(null);
+
+    try {
+      const response = await markManualPaymentPaid(
+        selectedOrder.id,
+      );
+
+      const updatedAt =
+        response.order.updatedAt ??
+        new Date().toISOString();
+
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === selectedOrder.id
+            ? {
+                ...order,
+                paymentStatus:
+                  response.order.paymentStatus,
+                updatedAt,
+              }
+            : order,
+        ),
+      );
+    } catch (caughtError) {
+      setDrawerError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to verify the payment.",
+      );
+    } finally {
+      setUpdatingPaymentOrderId(null);
+    }
   }
 
-  setUpdatingPaymentOrderId(selectedOrder.id);
-  setDrawerError(null);
-
-  try {
-    const response = await markManualPaymentPaid(
-      selectedOrder.id,
-    );
-
-    const updatedAt =
-      response.order.updatedAt ?? new Date().toISOString();
-
-    setOrders((currentOrders) => {
-      return currentOrders.map((order) => {
-        if (order.id !== selectedOrder.id) {
-          return order;
-        }
-
-        return {
-          ...order,
-          paymentStatus: response.order.paymentStatus,
-          updatedAt,
-        };
-      });
-    });
-  } catch (caughtError) {
-    setDrawerError(
-      caughtError instanceof Error
-        ? caughtError.message
-        : "Unable to verify the payment.",
-    );
-  } finally {
-    setUpdatingPaymentOrderId(null);
-  }
-}
+  const statisticCards = [
+    {
+      label: "Total orders",
+      value: statistics.total,
+      icon: ReceiptText,
+      iconClass: "bg-orange-100 text-orange-700",
+      cardClass:
+        "from-white to-orange-50/70",
+    },
+    {
+      label: "Paid orders",
+      value: statistics.paid,
+      icon: CheckCircle2,
+      iconClass:
+        "bg-emerald-100 text-emerald-700",
+      cardClass:
+        "from-white to-emerald-50/70",
+    },
+    {
+      label: "Pending payments",
+      value: statistics.pending,
+      icon: Clock3,
+      iconClass: "bg-amber-100 text-amber-700",
+      cardClass:
+        "from-white to-amber-50/70",
+    },
+    {
+      label: "Cancelled orders",
+      value: statistics.cancelled,
+      icon: XCircle,
+      iconClass: "bg-rose-100 text-rose-700",
+      cardClass:
+        "from-white to-rose-50/70",
+    },
+  ];
 
   return (
     <>
       <div className="space-y-6">
-        <motion.section
-          initial={
-            reduceMotion
-              ? false
-              : {
-                  opacity: 0,
-                  y: 14,
-                }
-          }
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          className="rounded-3xl border border-white/10 bg-slate-900/65 p-5 shadow-xl shadow-black/10 backdrop-blur-xl sm:p-6"
-        >
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {statisticCards.map(
+            (statistic, index) => {
+              const Icon = statistic.icon;
+
+              return (
+                <motion.article
+                  key={statistic.label}
+                  initial={
+                    reduceMotion
+                      ? false
+                      : {
+                          opacity: 0,
+                          y: 14,
+                        }
+                  }
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  transition={{
+                    delay: reduceMotion
+                      ? 0
+                      : index * 0.05,
+                  }}
+                  className={[
+                    "flex items-center gap-4 rounded-2xl border border-[#ead9cb] bg-gradient-to-br p-5 shadow-[0_10px_28px_rgba(92,48,21,0.07)]",
+                    statistic.cardClass,
+                  ].join(" ")}
+                >
+                  <div
+                    className={[
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
+                      statistic.iconClass,
+                    ].join(" ")}
+                  >
+                    <Icon className="h-6 w-6" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-[#7e6e64]">
+                      {statistic.label}
+                    </p>
+
+                    <p className="mt-1 text-2xl font-extrabold text-[#29160d]">
+                      {statistic.value}
+                    </p>
+                  </div>
+                </motion.article>
+              );
+            },
+          )}
+        </section>
+
+        <section className="rounded-3xl border border-[#e7d8cc] bg-white/80 p-5 shadow-[0_14px_40px_rgba(93,48,21,0.08)] backdrop-blur-xl sm:p-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-300">
-                  <ReceiptText className="h-5 w-5" />
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+                <ReceiptText className="h-6 w-6" />
+              </div>
 
-                <div>
-                  <h2 className="text-xl font-bold text-white">
-                    Customer orders
-                  </h2>
+              <div>
+                <h2 className="text-xl font-extrabold text-[#2b160d]">
+                  Customer orders
+                </h2>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    {filteredOrders.length} of {orders.length} orders
-                  </p>
-                </div>
+                <p className="mt-1 text-sm text-[#837268]">
+                  {filteredOrders.length} of{" "}
+                  {orders.length} orders
+                </p>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_170px_170px]">
-              <label className="relative">
-                <span className="sr-only">Search orders</span>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1fr)_190px_190px]">
+              <label className="relative sm:col-span-2 xl:col-span-1">
+                <span className="sr-only">
+                  Search orders
+                </span>
 
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9c897c]" />
 
                 <input
                   type="search"
@@ -395,8 +478,8 @@ export default function AdminOrdersClient({
                   onChange={(event) =>
                     setSearch(event.target.value)
                   }
-                  placeholder="Search name, phone or order..."
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 py-3 pl-11 pr-10 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                  placeholder="Search name, phone or order ID..."
+                  className="w-full rounded-xl border border-[#dfcbbb] bg-white py-3 pl-11 pr-10 text-sm text-[#2b160d] outline-none placeholder:text-[#ad9a8e] focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                 />
 
                 {search && (
@@ -404,7 +487,7 @@ export default function AdminOrdersClient({
                     type="button"
                     onClick={() => setSearch("")}
                     aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-500 hover:bg-white/5 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-[#9c897c] hover:bg-orange-50"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -416,19 +499,23 @@ export default function AdminOrdersClient({
                   Filter order status
                 </span>
 
-                <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9c897c]" />
 
                 <select
                   value={orderStatusFilter}
                   onChange={(event) =>
                     setOrderStatusFilter(
-                      event.target.value as OrderStatusFilter,
+                      event.target
+                        .value as OrderStatusFilter,
                     )
                   }
-                  className="w-full appearance-none rounded-xl border border-white/10 bg-slate-950/60 py-3 pl-10 pr-4 text-sm text-slate-300 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                  className="w-full appearance-none rounded-xl border border-[#dfcbbb] bg-white py-3 pl-10 pr-4 text-sm text-[#3d2417] outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                 >
                   {orderStatusOptions.map((status) => (
-                    <option key={status} value={status}>
+                    <option
+                      key={status}
+                      value={status}
+                    >
                       {formatStatus(status)}
                     </option>
                   ))}
@@ -440,7 +527,7 @@ export default function AdminOrdersClient({
                   Filter payment status
                 </span>
 
-                <CreditCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <CreditCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9c897c]" />
 
                 <select
                   value={paymentStatusFilter}
@@ -450,10 +537,13 @@ export default function AdminOrdersClient({
                         .value as PaymentStatusFilter,
                     )
                   }
-                  className="w-full appearance-none rounded-xl border border-white/10 bg-slate-950/60 py-3 pl-10 pr-4 text-sm text-slate-300 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                  className="w-full appearance-none rounded-xl border border-[#dfcbbb] bg-white py-3 pl-10 pr-4 text-sm text-[#3d2417] outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                 >
                   {paymentStatusOptions.map((status) => (
-                    <option key={status} value={status}>
+                    <option
+                      key={status}
+                      value={status}
+                    >
                       {formatStatus(status)}
                     </option>
                   ))}
@@ -466,166 +556,189 @@ export default function AdminOrdersClient({
             <button
               type="button"
               onClick={resetFilters}
-              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-indigo-300 transition hover:text-indigo-200"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#ad4c17]"
             >
               <X className="h-3.5 w-3.5" />
               Clear all filters
             </button>
           )}
-        </motion.section>
+        </section>
 
         {filteredOrders.length === 0 ? (
-          <motion.section
-            initial={{
-              opacity: 0,
-              scale: 0.98,
-            }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-            }}
-            className="rounded-3xl border border-white/10 bg-slate-900/65 px-6 py-16 text-center shadow-xl shadow-black/10 backdrop-blur-xl"
-          >
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-300">
-              <ReceiptText className="h-7 w-7" />
+          <section className="rounded-3xl border border-dashed border-[#dbc5b3] bg-white/60 px-6 py-16 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+              <ReceiptText className="h-6 w-6" />
             </div>
 
-            <h3 className="mt-5 text-lg font-bold text-white">
+            <h3 className="mt-4 font-bold text-[#2b160d]">
               No matching orders
             </h3>
 
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-[#837268]">
               Try changing your search or filters.
             </p>
-
-            {filtersActive && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="mt-5 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-400"
-              >
-                Reset filters
-              </button>
-            )}
-          </motion.section>
+          </section>
         ) : (
-          <motion.section
-            variants={
-              reduceMotion
-                ? undefined
-                : orderContainerVariants
-            }
-            initial={reduceMotion ? false : "hidden"}
-            animate={reduceMotion ? undefined : "visible"}
-            className="grid gap-4"
-          >
-            {filteredOrders.map((order) => {
-              const itemCount = order.items.reduce(
-                (total, item) => total + item.quantity,
-                0,
-              );
+          <section className="overflow-hidden rounded-3xl border border-[#e7d8cc] bg-white/60 shadow-[0_14px_40px_rgba(93,48,21,0.08)]">
+            <div className="hidden grid-cols-[1.25fr_1fr_0.55fr_0.65fr_0.65fr_0.5fr_auto] gap-4 border-b border-[#eaded5] bg-white/75 px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#8d7b70] lg:grid">
+              <span>Customer</span>
+              <span>Order details</span>
+              <span>Total</span>
+              <span>Status</span>
+              <span>Payment</span>
+              <span>Method</span>
+              <span>Action</span>
+            </div>
 
-              return (
-                <motion.button
-                  key={order.id}
-                  type="button"
-                  variants={
-                    reduceMotion
-                      ? undefined
-                      : orderItemVariants
-                  }
-                  onClick={() => openOrder(order.id)}
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          y: -3,
-                        }
-                  }
-                  className="group grid w-full gap-5 rounded-3xl border border-white/10 bg-slate-900/65 p-5 text-left shadow-lg shadow-black/10 transition hover:border-indigo-400/25 hover:bg-slate-900/85 sm:p-6 lg:grid-cols-[1.2fr_0.65fr_0.85fr_auto] lg:items-center"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-300 transition group-hover:scale-105 group-hover:bg-indigo-500/20">
-                        <UserRound className="h-5 w-5" />
+            <div className="space-y-3 p-3">
+              {filteredOrders.map(
+                (order, index) => {
+                  const totalQuantity =
+                    order.items.reduce(
+                      (total, item) =>
+                        total + item.quantity,
+                      0,
+                    );
+
+                  const firstItem =
+                    order.items[0];
+
+                  return (
+                    <motion.button
+                      key={order.id}
+                      type="button"
+                      initial={
+                        reduceMotion
+                          ? false
+                          : {
+                              opacity: 0,
+                              y: 10,
+                            }
+                      }
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                      }}
+                      transition={{
+                        delay: reduceMotion
+                          ? 0
+                          : index * 0.025,
+                      }}
+                      whileHover={
+                        reduceMotion
+                          ? undefined
+                          : {
+                              y: -2,
+                            }
+                      }
+                      onClick={() =>
+                        openOrder(order.id)
+                      }
+                      className="group grid w-full gap-4 rounded-2xl border border-[#ead8ca] bg-white/90 p-5 text-left shadow-[0_8px_22px_rgba(83,42,18,0.06)] transition hover:border-orange-300 hover:shadow-[0_12px_28px_rgba(126,58,20,0.12)] lg:grid-cols-[1.25fr_1fr_0.55fr_0.65fr_0.65fr_0.5fr_auto] lg:items-center"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-orange-200 font-extrabold text-orange-700">
+                          {getInitial(
+                            order.customerName,
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-[#28150d]">
+                            {order.customerName}
+                          </p>
+
+                          <p className="mt-1 truncate text-xs text-[#8e7c70]">
+                            #
+                            {getShortOrderId(
+                              order.id,
+                            )}{" "}
+                            ·{" "}
+                            {formatDate(
+                              order.createdAt,
+                            )}
+                          </p>
+                        </div>
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate font-bold text-white">
-                          {order.customerName}
+                        <p className="truncate text-sm font-semibold text-[#412719]">
+                          {firstItem
+                            ? `${firstItem.quantity} × ${firstItem.itemName}`
+                            : "No items"}
                         </p>
 
-                        <p className="mt-1 truncate text-xs text-slate-500">
-                          #{getShortOrderId(order.id)} ·{" "}
-                          {formatDate(order.createdAt)}
+                        <p className="mt-1 text-xs text-[#948278]">
+                          {totalQuantity}{" "}
+                          {totalQuantity === 1
+                            ? "item"
+                            : "items"}
                         </p>
                       </div>
-                    </div>
-                  </div>
 
-                  <div>
-                    <p className="text-xs text-slate-500">
-                      Order total
-                    </p>
+                      <p className="font-extrabold text-[#28150d]">
+                        {formatCurrency(
+                          order.totalAmount,
+                        )}
+                      </p>
 
-                    <p className="mt-1 text-lg font-bold text-white">
-                      {formatCurrency(order.totalAmount)}
-                    </p>
+                      <span
+                        className={[
+                          "w-fit rounded-full px-3 py-1 text-xs font-bold",
+                          getOrderStatusClasses(
+                            order.orderStatus,
+                          ),
+                        ].join(" ")}
+                      >
+                        {formatStatus(
+                          order.orderStatus,
+                        )}
+                      </span>
 
-                    <p className="mt-1 text-xs text-slate-600">
-                      {itemCount}{" "}
-                      {itemCount === 1 ? "item" : "items"}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <span
-                      className={[
-                        "rounded-full border px-2.5 py-1 text-xs font-semibold",
-                        getOrderStatusClasses(order.orderStatus),
-                      ].join(" ")}
-                    >
-                      {formatStatus(order.orderStatus)}
-                    </span>
-
-                    <span
-                      className={[
-                        "rounded-full px-2.5 py-1 text-xs font-semibold",
-                        getPaymentStatusClasses(
+                      <span
+                        className={[
+                          "w-fit rounded-full px-3 py-1 text-xs font-bold",
+                          getPaymentStatusClasses(
+                            order.paymentStatus,
+                          ),
+                        ].join(" ")}
+                      >
+                        {formatStatus(
                           order.paymentStatus,
-                        ),
-                      ].join(" ")}
-                    >
-                      {formatStatus(order.paymentStatus)}
-                    </span>
-                  </div>
+                        )}
+                      </span>
 
-                  <div className="flex items-center justify-between gap-3 lg:justify-end">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                      <Clock3 className="h-3.5 w-3.5" />
-                      {formatStatus(order.paymentMethod)}
-                    </div>
+                      <span className="text-sm font-medium text-[#766357]">
+                        {formatStatus(
+                          order.paymentMethod,
+                        )}
+                      </span>
 
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-slate-400 transition group-hover:border-indigo-400/30 group-hover:bg-indigo-500/10 group-hover:text-indigo-300">
-                      <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-                    </div>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </motion.section>
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#dfcbbb] bg-white text-[#8c3d14] transition group-hover:border-orange-400 group-hover:bg-[#9c4517] group-hover:text-white">
+                        <ChevronRight className="h-5 w-5" />
+                      </span>
+                    </motion.button>
+                  );
+                },
+              )}
+            </div>
+          </section>
         )}
       </div>
 
       <AdminOrderDetailsDrawer
-  order={selectedOrder}
-  isUpdating={updatingOrderId !== null}
-  isUpdatingPayment={updatingPaymentOrderId !== null}
-  error={drawerError}
-  onClose={closeOrder}
-  onUpdateStatus={handleUpdateStatus}
-  onMarkPaymentPaid={handleMarkPaymentPaid}
-/>
+        order={selectedOrder}
+        isUpdating={updatingOrderId !== null}
+        isUpdatingPayment={
+          updatingPaymentOrderId !== null
+        }
+        error={drawerError}
+        onClose={closeOrder}
+        onUpdateStatus={handleUpdateStatus}
+        onMarkPaymentPaid={
+          handleMarkPaymentPaid
+        }
+      />
     </>
   );
 }

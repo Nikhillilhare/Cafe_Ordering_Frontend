@@ -1,6 +1,7 @@
 "use client";
-import { createPortal } from "react-dom";
+
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   AnimatePresence,
   motion,
@@ -21,7 +22,6 @@ import {
 } from "lucide-react";
 
 import { useHydratedReducedMotion } from "@/hooks/useHydratedReducedMotion";
-
 import type {
   AdminOrderData,
   AdminOrderStatus,
@@ -30,12 +30,14 @@ import type {
 type AdminOrderDetailsDrawerProps = {
   order: AdminOrderData | null;
   isUpdating: boolean;
-   isUpdatingPayment: boolean;
+  isUpdatingPayment: boolean;
   error: string | null;
   onClose: () => void;
+
   onUpdateStatus: (
     status: AdminOrderStatus,
   ) => void | Promise<void>;
+
   onMarkPaymentPaid: () => void | Promise<void>;
 };
 
@@ -92,25 +94,34 @@ function getStatusClasses(status: string): string {
   switch (status) {
     case "PAID":
     case "COMPLETED":
-      return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300";
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
 
     case "READY":
-      return "border-cyan-400/20 bg-cyan-500/10 text-cyan-300";
+      return "border-sky-200 bg-sky-50 text-sky-700";
 
     case "PREPARING":
-      return "border-amber-400/20 bg-amber-500/10 text-amber-300";
+      return "border-blue-200 bg-blue-50 text-blue-700";
+
+    case "ACCEPTED":
+      return "border-violet-200 bg-violet-50 text-violet-700";
 
     case "FAILED":
     case "CANCELLED":
-      return "border-rose-400/20 bg-rose-500/10 text-rose-300";
+      return "border-rose-200 bg-rose-50 text-rose-700";
+
+    case "REFUNDED":
+      return "border-slate-200 bg-slate-50 text-slate-600";
+
+    case "PENDING":
+      return "border-amber-200 bg-amber-50 text-amber-700";
 
     default:
-      return "border-indigo-400/20 bg-indigo-500/10 text-indigo-300";
+      return "border-orange-200 bg-orange-50 text-orange-700";
   }
 }
 
 export default function AdminOrderDetailsDrawer({
-   order,
+  order,
   isUpdating,
   isUpdatingPayment,
   error,
@@ -121,12 +132,14 @@ export default function AdminOrderDetailsDrawer({
   const reduceMotion = useHydratedReducedMotion();
 
   const busy = isUpdating || isUpdatingPayment;
+
   useEffect(() => {
     if (!order) {
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
+    const previousOverflow =
+      document.body.style.overflow;
 
     document.body.style.overflow = "hidden";
 
@@ -136,11 +149,19 @@ export default function AdminOrderDetailsDrawer({
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow =
+        previousOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
     };
   }, [order, busy, onClose]);
 
@@ -148,205 +169,236 @@ export default function AdminOrderDetailsDrawer({
     ? allowedTransitions[order.orderStatus]
     : [];
 
-    const canManuallyMarkPaid =
-  order !== null &&
-  order.paymentStatus !== "PAID" &&
-  (order.paymentMethod === "WHATSAPP" ||
-    order.paymentMethod === "CASH");    
+  const canManuallyMarkPaid =
+    order !== null &&
+    order.paymentStatus !== "PAID" &&
+    (order.paymentMethod === "WHATSAPP" ||
+      order.paymentMethod === "CASH");
 
-  return createPortal (
+  const totalQuantity =
+    order?.items.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    ) ?? 0;
+
+  return createPortal(
     <AnimatePresence>
       {order && (
         <>
           <motion.button
             type="button"
             aria-label="Close order details"
-            initial={false}
+            initial={{
+              opacity: 0,
+            }}
             animate={{
               opacity: 1,
             }}
             exit={{
               opacity: 0,
             }}
-             transition={{
-             duration: 0.2,
-            }}
             onClick={() => {
               if (!busy) {
                 onClose();
               }
             }}
-           className="fixed inset-0 z-[90] cursor-default bg-black/65 backdrop-blur-sm"
+            className="fixed inset-0 z-[90] cursor-default bg-[#2a1309]/35 backdrop-blur-[3px]"
           />
 
           <motion.aside
             role="dialog"
             aria-modal="true"
             aria-labelledby="order-drawer-title"
-            initial={false}
-animate={{
-  opacity: 1,
-  x: 0,
-}}
-exit={{
-  opacity: 0,
-  x: 48,
-}}
-transition={{
-  duration: 0.25,
-  ease: "easeOut",
-}}
-            className="fixed inset-y-0 right-0 z-[100] flex w-full max-w-xl flex-col border-l border-white/10 bg-slate-950 shadow-2xl shadow-black/60"
+            initial={
+              reduceMotion
+                ? false
+                : {
+                    x: "100%",
+                  }
+            }
+            animate={{
+              x: 0,
+            }}
+            exit={{
+              x: "100%",
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 320,
+              damping: 34,
+            }}
+            className="fixed inset-y-0 right-0 z-[100] flex w-full max-w-2xl flex-col border-l border-[#e4d0bf] bg-[#fffaf5] shadow-[-22px_0_60px_rgba(54,24,8,0.22)]"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-white/10 p-5 sm:p-6">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-300">
-                  Order details
-                </p>
+            <header className="relative overflow-hidden border-b border-[#eadbcf] bg-gradient-to-br from-white via-orange-50/80 to-[#f3d2b7]/70 p-5 sm:p-6">
+              <div className="pointer-events-none absolute -right-20 -top-24 h-60 w-60 rounded-full bg-orange-300/25 blur-3xl" />
 
-                <h2
-                  id="order-drawer-title"
-                  className="mt-2 text-2xl font-bold text-white"
+              <div className="relative flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#ba531b]">
+                    Order details
+                  </p>
+
+                  <h2
+                    id="order-drawer-title"
+                    className="mt-2 text-2xl font-extrabold text-[#29160d]"
+                  >
+                    #{getShortOrderId(order.id)}
+                  </h2>
+
+                  <p className="mt-1 text-sm text-[#827066]">
+                    {formatDate(order.createdAt)}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onClose}
+                  aria-label="Close order details"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#dfcbbb] bg-white/80 text-[#765849] shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-[#9c4517] disabled:opacity-50"
                 >
-                  #{getShortOrderId(order.id)}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  {formatDate(order.createdAt)}
-                </p>
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onClose}
-                aria-label="Close order details"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-slate-400 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </header>
-
-            <div className="flex-1 space-y-6 overflow-y-auto p-5 sm:p-6">
-              <section className="grid grid-cols-2 gap-3">
+              <div className="relative mt-5 grid grid-cols-2 gap-3">
                 <div
                   className={[
                     "rounded-2xl border p-4",
-                    getStatusClasses(order.orderStatus),
+                    getStatusClasses(
+                      order.orderStatus,
+                    ),
                   ].join(" ")}
                 >
-                  <p className="text-xs opacity-70">Order status</p>
+                  <p className="text-xs font-medium opacity-75">
+                    Order status
+                  </p>
 
-                  <p className="mt-1 font-bold">
-                    {formatStatus(order.orderStatus)}
+                  <p className="mt-1 font-extrabold">
+                    {formatStatus(
+                      order.orderStatus,
+                    )}
                   </p>
                 </div>
 
                 <div
                   className={[
                     "rounded-2xl border p-4",
-                    getStatusClasses(order.paymentStatus),
+                    getStatusClasses(
+                      order.paymentStatus,
+                    ),
                   ].join(" ")}
                 >
-                  <p className="text-xs opacity-70">
+                  <p className="text-xs font-medium opacity-75">
                     Payment status
                   </p>
 
-                  <p className="mt-1 font-bold">
-                    {formatStatus(order.paymentStatus)}
+                  <p className="mt-1 font-extrabold">
+                    {formatStatus(
+                      order.paymentStatus,
+                    )}
                   </p>
                 </div>
-              </section>
+              </div>
+            </header>
 
-              <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
-                  <UserRound className="h-4 w-4 text-indigo-300" />
+            <div className="flex-1 space-y-5 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:#d7bba5_transparent] sm:p-6">
+              <section className="rounded-2xl border border-[#eadbcf] bg-white p-5 shadow-[0_8px_24px_rgba(83,42,18,0.05)]">
+                <div className="flex items-center gap-2 text-sm font-bold text-[#63412e]">
+                  <UserRound className="h-4 w-4 text-[#b65019]" />
                   Customer
                 </div>
 
-                <p className="mt-4 text-lg font-bold text-white">
+                <p className="mt-4 text-lg font-extrabold text-[#29160d]">
                   {order.customerName}
                 </p>
 
                 <a
                   href={`tel:${order.customerPhone}`}
-                  className="mt-2 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-indigo-300"
+                  className="mt-2 inline-flex items-center gap-2 text-sm text-[#7f6b5e] transition hover:text-[#a84414]"
                 >
                   <Phone className="h-4 w-4" />
                   {order.customerPhone}
                 </a>
               </section>
 
-              <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <section className="rounded-2xl border border-[#eadbcf] bg-white p-5 shadow-[0_8px_24px_rgba(83,42,18,0.05)]">
                 <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
-                    <ReceiptText className="h-4 w-4 text-indigo-300" />
+                  <div className="flex items-center gap-2 text-sm font-bold text-[#63412e]">
+                    <ReceiptText className="h-4 w-4 text-[#b65019]" />
                     Order items
                   </div>
 
-                  <span className="text-xs text-slate-500">
-                    {order.items.reduce(
-                      (total, item) => total + item.quantity,
-                      0,
-                    )}{" "}
-                    items
+                  <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
+                    {totalQuantity}{" "}
+                    {totalQuantity === 1
+                      ? "item"
+                      : "items"}
                   </span>
                 </div>
 
-                <div className="mt-4 divide-y divide-white/10">
+                <div className="mt-4 divide-y divide-[#eee2d8]">
                   {order.items.map((item) => (
                     <div
                       key={item.id}
                       className="flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0"
                     >
                       <div>
-                        <p className="font-semibold text-white">
+                        <p className="font-bold text-[#2b160d]">
                           {item.itemName}
                         </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-[#8b796e]">
                           {item.quantity} ×{" "}
-                          {formatCurrency(item.unitPrice)}
+                          {formatCurrency(
+                            item.unitPrice,
+                          )}
                         </p>
                       </div>
 
-                      <p className="font-bold text-slate-200">
-                        {formatCurrency(item.totalPrice)}
+                      <p className="font-extrabold text-[#3e2416]">
+                        {formatCurrency(
+                          item.totalPrice,
+                        )}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-5">
-                  <span className="font-semibold text-slate-300">
-                    Total
+                <div className="mt-5 flex items-center justify-between border-t border-[#eadbcf] pt-5">
+                  <span className="font-bold text-[#6d5140]">
+                    Order total
                   </span>
 
-                  <span className="text-xl font-bold text-white">
-                    {formatCurrency(order.totalAmount)}
+                  <span className="text-2xl font-extrabold text-[#9c4517]">
+                    {formatCurrency(
+                      order.totalAmount,
+                    )}
                   </span>
                 </div>
               </section>
 
               <section className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <CreditCard className="h-4 w-4" />
+                <div className="rounded-2xl border border-[#eadbcf] bg-white p-4">
+                  <div className="flex items-center gap-2 text-xs font-medium text-[#8b796e]">
+                    <CreditCard className="h-4 w-4 text-[#b65019]" />
                     Payment method
                   </div>
 
-                  <p className="mt-2 font-semibold text-white">
-                    {formatStatus(order.paymentMethod)}
+                  <p className="mt-2 font-bold text-[#2b160d]">
+                    {formatStatus(
+                      order.paymentMethod,
+                    )}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <Clock3 className="h-4 w-4" />
+                <div className="rounded-2xl border border-[#eadbcf] bg-white p-4">
+                  <div className="flex items-center gap-2 text-xs font-medium text-[#8b796e]">
+                    <Clock3 className="h-4 w-4 text-[#b65019]" />
                     Last updated
                   </div>
 
-                  <p className="mt-2 text-sm font-semibold text-white">
+                  <p className="mt-2 text-sm font-bold text-[#2b160d]">
                     {formatDate(order.updatedAt)}
                   </p>
                 </div>
@@ -355,141 +407,160 @@ transition={{
               {error && (
                 <div
                   role="alert"
-                  className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200"
+                  className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700"
                 >
                   {error}
                 </div>
               )}
             </div>
 
-           <footer className="border-t border-white/10 bg-slate-950/90 p-5 sm:p-6">
-  <div className="mb-5">
-    {canManuallyMarkPaid && (
-      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300">
-            <Banknote className="h-5 w-5" />
-          </div>
+            <footer className="border-t border-[#eadbcf] bg-white/95 p-5 shadow-[0_-10px_28px_rgba(80,38,16,0.06)] backdrop-blur-xl sm:p-6">
+              {canManuallyMarkPaid && (
+                <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                      <Banknote className="h-5 w-5" />
+                    </div>
 
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-white">
-              Manual payment verification
-            </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-emerald-900">
+                        Manual payment verification
+                      </p>
 
-            <p className="mt-1 text-xs leading-5 text-slate-400">
-              Confirm only after receiving and verifying the
-              customer&apos;s{" "}
-              {formatStatus(order.paymentMethod)} payment.
-            </p>
-          </div>
-        </div>
+                      <p className="mt-1 text-xs leading-5 text-emerald-700">
+                        Confirm only after receiving and
+                        verifying the customer&apos;s{" "}
+                        {formatStatus(
+                          order.paymentMethod,
+                        )}{" "}
+                        payment.
+                      </p>
+                    </div>
+                  </div>
 
-        <motion.button
-          type="button"
-          disabled={busy}
-          onClick={() => void onMarkPaymentPaid()}
-          whileTap={
-            reduceMotion
-              ? undefined
-              : {
-                  scale: 0.98,
-                }
-          }
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isUpdatingPayment ? (
-            <>
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-              Verifying payment…
-            </>
-          ) : (
-            <>
-              <ShieldCheck className="h-4 w-4" />
-              Mark payment as paid
-            </>
-          )}
-        </motion.button>
-      </div>
-    )}
-
-    {order.paymentStatus === "PAID" && (
-      <div className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-300">
-        <ShieldCheck className="h-5 w-5" />
-        Payment verified
-      </div>
-    )}
-
-    {order.paymentMethod === "UPI" &&
-      order.paymentStatus !== "PAID" && (
-        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm text-blue-200">
-          Online UPI payment status is controlled by the payment gateway
-          and cannot be changed manually.
-        </div>
-      )}
-  </div>
-
-  {nextStatuses.length > 0 ? (
-    <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-        Update order status
-      </p>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {nextStatuses.map((status) => {
-          const cancelling = status === "CANCELLED";
-
-          return (
-            <motion.button
-              key={status}
-              type="button"
-              disabled={busy}
-              onClick={() => void onUpdateStatus(status)}
-              whileTap={
-                reduceMotion
-                  ? undefined
-                  : {
-                      scale: 0.97,
+                  <motion.button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void onMarkPaymentPaid()
                     }
-              }
-              className={[
-                "flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
-                cancelling
-                  ? "border border-rose-400/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/15"
-                  : "bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-950/30",
-              ].join(" ")}
-            >
-              {isUpdating ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : cancelling ? (
-                <XCircle className="h-4 w-4" />
-              ) : status === "COMPLETED" ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <PackageCheck className="h-4 w-4" />
+                    whileTap={
+                      reduceMotion
+                        ? undefined
+                        : {
+                            scale: 0.98,
+                          }
+                    }
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isUpdatingPayment ? (
+                      <>
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                        Verifying payment…
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-4 w-4" />
+                        Mark payment as paid
+                      </>
+                    )}
+                  </motion.button>
+                </div>
               )}
 
-              {statusButtonLabels[status]}
-            </motion.button>
-          );
-        })}
-      </div>
-    </div>
-  ) : (
-    <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm font-semibold text-slate-400">
-      {order.orderStatus === "COMPLETED" ? (
-        <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-      ) : (
-        <XCircle className="h-5 w-5 text-rose-400" />
-      )}
+              {order.paymentStatus === "PAID" && (
+                <div className="mb-5 flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
+                  <ShieldCheck className="h-5 w-5" />
+                  Payment verified
+                </div>
+              )}
 
-      This order is {formatStatus(order.orderStatus)}.
-    </div>
-  )}
-</footer>
+              {order.paymentMethod === "UPI" &&
+                order.paymentStatus !== "PAID" && (
+                  <div className="mb-5 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-800">
+                    Online UPI payment status is controlled by
+                    the payment gateway and cannot be changed
+                    manually.
+                  </div>
+                )}
+
+              {nextStatuses.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#8b796e]">
+                    Update order status
+                  </p>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {nextStatuses.map((status) => {
+                      const cancelling =
+                        status === "CANCELLED";
+
+                      return (
+                        <motion.button
+                          key={status}
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            void onUpdateStatus(
+                              status,
+                            )
+                          }
+                          whileTap={
+                            reduceMotion
+                              ? undefined
+                              : {
+                                  scale: 0.97,
+                                }
+                          }
+                          className={[
+                            "flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
+                            cancelling
+                              ? "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                              : "bg-gradient-to-r from-[#b8561d] to-[#8c3811] text-white shadow-lg shadow-orange-900/15 hover:from-[#a14918] hover:to-[#752d0d]",
+                          ].join(" ")}
+                        >
+                          {isUpdating ? (
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                          ) : cancelling ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : status ===
+                            "COMPLETED" ? (
+                            <CheckCircle2 className="h-4 w-4" />
+                          ) : (
+                            <PackageCheck className="h-4 w-4" />
+                          )}
+
+                          {
+                            statusButtonLabels[
+                              status
+                            ]
+                          }
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 rounded-2xl border border-[#eadbcf] bg-[#faf5f1] p-4 text-sm font-bold text-[#796255]">
+                  {order.orderStatus ===
+                  "COMPLETED" ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-rose-600" />
+                  )}
+
+                  This order is{" "}
+                  {formatStatus(
+                    order.orderStatus,
+                  )}
+                  .
+                </div>
+              )}
+            </footer>
           </motion.aside>
         </>
       )}
     </AnimatePresence>,
-     document.body,
+    document.body,
   );
 }

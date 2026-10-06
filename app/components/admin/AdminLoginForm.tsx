@@ -1,11 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  type FormEvent,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   AnimatePresence,
   motion,
-  useReducedMotion,
 } from "motion/react";
 import {
   ArrowRight,
@@ -17,21 +19,32 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { useHydratedReducedMotion } from "@/hooks/useHydratedReducedMotion";
+
 type LoginResponse = {
   error?: string;
 };
 
 export default function AdminLoginForm() {
   const router = useRouter();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useHydratedReducedMotion();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [showPassword, setShowPassword] =
+    useState(false);
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
+
+  const [error, setError] = useState<string | null>(
+    null,
+  );
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     if (isSubmitting) {
@@ -40,10 +53,17 @@ export default function AdminLoginForm() {
 
     setError(null);
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = email
+      .trim()
+      .toLowerCase();
 
-    if (!normalizedEmail || !normalizedEmail.includes("@")) {
-      setError("Please enter a valid email address.");
+    if (
+      !normalizedEmail ||
+      !normalizedEmail.includes("@")
+    ) {
+      setError(
+        "Please enter a valid email address.",
+      );
       return;
     }
 
@@ -55,26 +75,34 @@ export default function AdminLoginForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/admin/login", {
-        method: "POST",
+      const response = await fetch(
+        "/api/admin/login",
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          credentials: "same-origin",
+
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password,
+          }),
         },
+      );
 
-        body: JSON.stringify({
-          email: normalizedEmail,
-          password,
-        }),
-      });
-
-      const data = (await response.json().catch(() => null)) as
+      const data = (await response
+        .json()
+        .catch(() => null)) as
         | LoginResponse
         | null;
 
       if (!response.ok) {
         throw new Error(
-          data?.error ?? "Unable to sign in. Please try again.",
+          data?.error ??
+            "Unable to sign in. Please try again.",
         );
       }
 
@@ -99,67 +127,86 @@ export default function AdminLoginForm() {
           ? false
           : {
               opacity: 0,
-              y: 28,
-              scale: 0.97,
-              filter: "blur(8px)",
+              y: 24,
+              scale: 0.98,
             }
       }
       animate={{
         opacity: 1,
         y: 0,
         scale: 1,
-        filter: "blur(0px)",
       }}
       transition={{
-        duration: 0.6,
+        duration: 0.55,
         ease: [0.22, 1, 0.36, 1],
       }}
-      className="w-full rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:p-8"
+      className="w-full rounded-[2rem] border border-[#e2cdbd] bg-white/90 p-6 shadow-[0_24px_65px_rgba(80,37,14,0.16)] backdrop-blur-2xl sm:p-8"
     >
       <motion.div
-        initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={
+          reduceMotion
+            ? false
+            : {
+                opacity: 0,
+                y: 10,
+              }
+        }
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
         transition={{
-          delay: 0.15,
+          delay: reduceMotion ? 0 : 0.12,
           duration: 0.4,
         }}
         className="mb-8"
       >
-        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/25">
+        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d56b26] to-[#8c3610] shadow-lg shadow-orange-900/20">
           <ShieldCheck className="h-6 w-6 text-white" />
         </div>
 
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-300">
+        <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-[#b65019]">
           Secure administration
         </p>
 
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-white">
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-[#2b160d]">
           Welcome back
         </h1>
 
-        <p className="mt-2 text-sm leading-6 text-slate-400">
-          Sign in to manage your cafe, menu, orders and payments.
+        <p className="mt-2 text-sm leading-6 text-[#7f6d62]">
+          Sign in to manage your cafe, menu, orders and
+          payments.
         </p>
       </motion.div>
 
       <div className="space-y-5">
         <motion.div
-          initial={reduceMotion ? false : { opacity: 0, x: -14 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={
+            reduceMotion
+              ? false
+              : {
+                  opacity: 0,
+                  x: -12,
+                }
+          }
+          animate={{
+            opacity: 1,
+            x: 0,
+          }}
           transition={{
-            delay: 0.24,
+            delay: reduceMotion ? 0 : 0.2,
             duration: 0.4,
           }}
         >
           <label
             htmlFor="admin-email"
-            className="mb-2 block text-sm font-semibold text-slate-200"
+            className="mb-2 block text-sm font-bold text-[#4c2b19]"
           >
             Email address
           </label>
 
           <div className="group relative">
-            <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 transition group-focus-within:text-indigo-400" />
+            <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9b887c] transition group-focus-within:text-[#b65019]" />
 
             <input
               id="admin-email"
@@ -169,51 +216,77 @@ export default function AdminLoginForm() {
               autoComplete="email"
               value={email}
               disabled={isSubmitting}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setError(null);
+              }}
               placeholder="owner@yourcafe.com"
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 py-3.5 pl-12 pr-4 text-white outline-none transition duration-200 placeholder:text-slate-600 hover:border-indigo-400/40 focus:-translate-y-0.5 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl border border-[#dfcbbb] bg-[#fffdfa] py-3.5 pl-12 pr-4 text-[#2b160d] outline-none transition placeholder:text-[#ad9a8e] hover:border-orange-300 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
         </motion.div>
 
         <motion.div
-          initial={reduceMotion ? false : { opacity: 0, x: 14 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={
+            reduceMotion
+              ? false
+              : {
+                  opacity: 0,
+                  x: 12,
+                }
+          }
+          animate={{
+            opacity: 1,
+            x: 0,
+          }}
           transition={{
-            delay: 0.31,
+            delay: reduceMotion ? 0 : 0.27,
             duration: 0.4,
           }}
         >
           <label
             htmlFor="admin-password"
-            className="mb-2 block text-sm font-semibold text-slate-200"
+            className="mb-2 block text-sm font-bold text-[#4c2b19]"
           >
             Password
           </label>
 
           <div className="group relative">
-            <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 transition group-focus-within:text-indigo-400" />
+            <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9b887c] transition group-focus-within:text-[#b65019]" />
 
             <input
               id="admin-password"
               name="password"
-              type={showPassword ? "text" : "password"}
+              type={
+                showPassword
+                  ? "text"
+                  : "password"
+              }
               autoComplete="current-password"
               value={password}
               disabled={isSubmitting}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setError(null);
+              }}
               placeholder="Enter your password"
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 py-3.5 pl-12 pr-12 text-white outline-none transition duration-200 placeholder:text-slate-600 hover:border-indigo-400/40 focus:-translate-y-0.5 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl border border-[#dfcbbb] bg-[#fffdfa] py-3.5 pl-12 pr-12 text-[#2b160d] outline-none transition placeholder:text-[#ad9a8e] hover:border-orange-300 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
 
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={() => setShowPassword((current) => !current)}
-              aria-label={
-                showPassword ? "Hide password" : "Show password"
+              onClick={() =>
+                setShowPassword(
+                  (current) => !current,
+                )
               }
-              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-500 transition hover:bg-white/5 hover:text-slate-200 disabled:opacity-50"
+              aria-label={
+                showPassword
+                  ? "Hide password"
+                  : "Show password"
+              }
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-1 text-[#9b887c] transition hover:bg-orange-50 hover:text-[#9c4517] disabled:opacity-50"
             >
               {showPassword ? (
                 <EyeOff className="h-5 w-5" />
@@ -236,7 +309,7 @@ export default function AdminLoginForm() {
                 : {
                     opacity: 0,
                     height: 0,
-                    y: -8,
+                    y: -6,
                   }
             }
             animate={{
@@ -247,12 +320,12 @@ export default function AdminLoginForm() {
             exit={{
               opacity: 0,
               height: 0,
-              y: -8,
+              y: -6,
             }}
             transition={{
               duration: 0.25,
             }}
-            className="mt-5 overflow-hidden rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
+            className="mt-5 overflow-hidden rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
           >
             {error}
           </motion.div>
@@ -277,12 +350,14 @@ export default function AdminLoginForm() {
                 scale: 0.98,
               }
         }
-        className="group relative mt-7 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 px-5 py-4 font-bold text-white shadow-xl shadow-indigo-950/40 transition disabled:cursor-not-allowed disabled:opacity-60"
+        className="group relative mt-7 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-[#c55d1e] via-[#a74715] to-[#7e2f0c] px-5 py-4 font-bold text-white shadow-[0_14px_28px_rgba(116,45,10,0.24)] transition disabled:cursor-not-allowed disabled:opacity-60"
       >
         <motion.span
           aria-hidden="true"
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-          initial={{ x: "-120%" }}
+          initial={{
+            x: "-120%",
+          }}
           whileHover={
             reduceMotion || isSubmitting
               ? undefined
@@ -304,14 +379,16 @@ export default function AdminLoginForm() {
           ) : (
             <>
               Sign in to dashboard
+
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </>
           )}
         </span>
       </motion.button>
 
-      <p className="mt-6 text-center text-xs leading-5 text-slate-500">
-        Access is restricted to authorized cafe administrators.
+      <p className="mt-6 text-center text-xs leading-5 text-[#948176]">
+        Access is restricted to authorized cafe
+        administrators.
       </p>
     </motion.form>
   );
