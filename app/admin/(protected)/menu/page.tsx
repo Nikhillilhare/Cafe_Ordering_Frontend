@@ -1,25 +1,104 @@
 import type { Metadata } from "next";
-import { ListOrdered } from "lucide-react";
+
+import AdminMenuItemsClient from "@/app/components/admin/AdminMenuItemsClient";
+import {
+  canManageCafe,
+  requireAdminPage,
+} from "@/lib/auth/requireAdmin";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Menu Items",
 };
 
-export default function AdminMenuPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminMenuItemsPage() {
+  const admin = await requireAdminPage();
+
+  /*
+   * All data is restricted using the authenticated
+   * admin's database cafeId.
+   */
+  const [items, categories] = await Promise.all([
+    prisma.menuItem.findMany({
+      where: {
+        cafeId: admin.cafeId,
+      },
+
+      orderBy: [
+        {
+          category: {
+            sortOrder: "asc",
+          },
+        },
+        {
+          sortOrder: "asc",
+        },
+        {
+          createdAt: "asc",
+        },
+      ],
+
+      select: {
+        id: true,
+        categoryId: true,
+        name: true,
+        description: true,
+        price: true,
+        available: true,
+        featured: true,
+        sortOrder: true,
+        createdAt: true,
+        updatedAt: true,
+
+        category: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    }),
+
+    prisma.category.findMany({
+      where: {
+        cafeId: admin.cafeId,
+      },
+
+      orderBy: [
+        {
+          sortOrder: "asc",
+        },
+        {
+          name: "asc",
+        },
+      ],
+
+      select: {
+        id: true,
+        name: true,
+        active: true,
+      },
+    }),
+  ]);
+
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-900/65 p-8 shadow-xl shadow-black/10 backdrop-blur-xl">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300">
-        <ListOrdered className="h-7 w-7" />
-      </div>
-
-      <h2 className="mt-6 text-2xl font-bold text-white">
-        Menu management
-      </h2>
-
-      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
-        Menu items, prices, descriptions and availability will be managed
-        from this page.
-      </p>
-    </section>
+    <AdminMenuItemsClient
+      canManage={canManageCafe(admin.role)}
+      categories={categories}
+      initialItems={items.map((item) => ({
+        id: item.id,
+        categoryId: item.categoryId,
+        categoryName: item.category.name,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        available: item.available,
+        featured: item.featured,
+        sortOrder: item.sortOrder,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+      }))}
+    />
   );
 }

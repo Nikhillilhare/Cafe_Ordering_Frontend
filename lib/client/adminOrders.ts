@@ -123,3 +123,64 @@ export async function updateAdminOrderStatus(
 
   return data;
 }
+export type MarkManualPaymentPaidResponse = {
+  order: {
+    id: string;
+    paymentStatus: AdminPaymentStatus;
+    updatedAt?: string;
+  };
+
+  payment: {
+    id: string;
+    status: AdminPaymentStatus;
+  };
+};
+
+export async function markManualPaymentPaid(
+  orderId: string,
+): Promise<MarkManualPaymentPaidResponse> {
+  const response = await fetch(
+    `/api/admin/orders/${encodeURIComponent(
+      orderId,
+    )}/payment-status`,
+    {
+      method: "PATCH",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        status: "PAID",
+      }),
+    },
+  );
+
+  const data = (await response.json().catch(() => null)) as
+    | MarkManualPaymentPaidResponse
+    | AdminOrderErrorResponse
+    | null;
+
+  if (!response.ok) {
+    const message =
+      data && "error" in data && data.error
+        ? data.error
+        : "Unable to verify the manual payment.";
+
+    throw new AdminOrderApiError(message);
+  }
+
+  if (
+    !data ||
+    !("order" in data) ||
+    !("payment" in data) ||
+    !data.order ||
+    !data.payment
+  ) {
+    throw new AdminOrderApiError(
+      "Invalid payment verification response.",
+    );
+  }
+
+  return data;
+}

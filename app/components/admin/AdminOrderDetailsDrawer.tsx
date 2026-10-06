@@ -1,11 +1,12 @@
 "use client";
-
+import { createPortal } from "react-dom";
 import { useEffect } from "react";
 import {
   AnimatePresence,
   motion,
 } from "motion/react";
 import {
+  Banknote,
   CheckCircle2,
   Clock3,
   CreditCard,
@@ -13,6 +14,7 @@ import {
   PackageCheck,
   Phone,
   ReceiptText,
+  ShieldCheck,
   UserRound,
   X,
   XCircle,
@@ -28,11 +30,13 @@ import type {
 type AdminOrderDetailsDrawerProps = {
   order: AdminOrderData | null;
   isUpdating: boolean;
+   isUpdatingPayment: boolean;
   error: string | null;
   onClose: () => void;
   onUpdateStatus: (
     status: AdminOrderStatus,
   ) => void | Promise<void>;
+  onMarkPaymentPaid: () => void | Promise<void>;
 };
 
 const allowedTransitions: Record<
@@ -106,14 +110,17 @@ function getStatusClasses(status: string): string {
 }
 
 export default function AdminOrderDetailsDrawer({
-  order,
+   order,
   isUpdating,
+  isUpdatingPayment,
   error,
   onClose,
   onUpdateStatus,
+  onMarkPaymentPaid,
 }: AdminOrderDetailsDrawerProps) {
   const reduceMotion = useHydratedReducedMotion();
 
+  const busy = isUpdating || isUpdatingPayment;
   useEffect(() => {
     if (!order) {
       return;
@@ -124,70 +131,72 @@ export default function AdminOrderDetailsDrawer({
     document.body.style.overflow = "hidden";
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isUpdating) {
+      if (event.key === "Escape" && !busy) {
         onClose();
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [order, isUpdating, onClose]);
+  }, [order, busy, onClose]);
 
   const nextStatuses = order
     ? allowedTransitions[order.orderStatus]
     : [];
 
-  return (
+    const canManuallyMarkPaid =
+  order !== null &&
+  order.paymentStatus !== "PAID" &&
+  (order.paymentMethod === "WHATSAPP" ||
+    order.paymentMethod === "CASH");    
+
+  return createPortal (
     <AnimatePresence>
       {order && (
         <>
           <motion.button
             type="button"
             aria-label="Close order details"
-            initial={{
-              opacity: 0,
-            }}
+            initial={false}
             animate={{
               opacity: 1,
             }}
             exit={{
               opacity: 0,
             }}
+             transition={{
+             duration: 0.2,
+            }}
             onClick={() => {
-              if (!isUpdating) {
+              if (!busy) {
                 onClose();
               }
             }}
-            className="fixed inset-0 z-40 cursor-default bg-black/65 backdrop-blur-sm"
+           className="fixed inset-0 z-[90] cursor-default bg-black/65 backdrop-blur-sm"
           />
 
           <motion.aside
             role="dialog"
             aria-modal="true"
             aria-labelledby="order-drawer-title"
-            initial={
-              reduceMotion
-                ? false
-                : {
-                    x: "100%",
-                  }
-            }
-            animate={{
-              x: 0,
-            }}
-            exit={{
-              x: "100%",
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 320,
-              damping: 34,
-            }}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-white/10 bg-slate-950/95 shadow-2xl shadow-black/60 backdrop-blur-2xl"
+            initial={false}
+animate={{
+  opacity: 1,
+  x: 0,
+}}
+exit={{
+  opacity: 0,
+  x: 48,
+}}
+transition={{
+  duration: 0.25,
+  ease: "easeOut",
+}}
+            className="fixed inset-y-0 right-0 z-[100] flex w-full max-w-xl flex-col border-l border-white/10 bg-slate-950 shadow-2xl shadow-black/60"
           >
             <header className="flex items-start justify-between gap-4 border-b border-white/10 p-5 sm:p-6">
               <div>
@@ -209,7 +218,7 @@ export default function AdminOrderDetailsDrawer({
 
               <button
                 type="button"
-                disabled={isUpdating}
+                disabled={busy}
                 onClick={onClose}
                 aria-label="Close order details"
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-slate-400 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
@@ -353,68 +362,134 @@ export default function AdminOrderDetailsDrawer({
               )}
             </div>
 
-            <footer className="border-t border-white/10 bg-slate-950/90 p-5 sm:p-6">
-              {nextStatuses.length > 0 ? (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                    Update order status
-                  </p>
+           <footer className="border-t border-white/10 bg-slate-950/90 p-5 sm:p-6">
+  <div className="mb-5">
+    {canManuallyMarkPaid && (
+      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300">
+            <Banknote className="h-5 w-5" />
+          </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {nextStatuses.map((status) => {
-                      const cancelling = status === "CANCELLED";
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-white">
+              Manual payment verification
+            </p>
 
-                      return (
-                        <motion.button
-                          key={status}
-                          type="button"
-                          disabled={isUpdating}
-                          onClick={() => void onUpdateStatus(status)}
-                          whileTap={
-                            reduceMotion
-                              ? undefined
-                              : {
-                                  scale: 0.97,
-                                }
-                          }
-                          className={[
-                            "flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
-                            cancelling
-                              ? "border border-rose-400/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/15"
-                              : "bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-950/30",
-                          ].join(" ")}
-                        >
-                          {isUpdating ? (
-                            <LoaderCircle className="h-4 w-4 animate-spin" />
-                          ) : cancelling ? (
-                            <XCircle className="h-4 w-4" />
-                          ) : status === "COMPLETED" ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                          ) : (
-                            <PackageCheck className="h-4 w-4" />
-                          )}
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              Confirm only after receiving and verifying the
+              customer&apos;s{" "}
+              {formatStatus(order.paymentMethod)} payment.
+            </p>
+          </div>
+        </div>
 
-                          {statusButtonLabels[status]}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
+        <motion.button
+          type="button"
+          disabled={busy}
+          onClick={() => void onMarkPaymentPaid()}
+          whileTap={
+            reduceMotion
+              ? undefined
+              : {
+                  scale: 0.98,
+                }
+          }
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isUpdatingPayment ? (
+            <>
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Verifying payment…
+            </>
+          ) : (
+            <>
+              <ShieldCheck className="h-4 w-4" />
+              Mark payment as paid
+            </>
+          )}
+        </motion.button>
+      </div>
+    )}
+
+    {order.paymentStatus === "PAID" && (
+      <div className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-300">
+        <ShieldCheck className="h-5 w-5" />
+        Payment verified
+      </div>
+    )}
+
+    {order.paymentMethod === "UPI" &&
+      order.paymentStatus !== "PAID" && (
+        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm text-blue-200">
+          Online UPI payment status is controlled by the payment gateway
+          and cannot be changed manually.
+        </div>
+      )}
+  </div>
+
+  {nextStatuses.length > 0 ? (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+        Update order status
+      </p>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {nextStatuses.map((status) => {
+          const cancelling = status === "CANCELLED";
+
+          return (
+            <motion.button
+              key={status}
+              type="button"
+              disabled={busy}
+              onClick={() => void onUpdateStatus(status)}
+              whileTap={
+                reduceMotion
+                  ? undefined
+                  : {
+                      scale: 0.97,
+                    }
+              }
+              className={[
+                "flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
+                cancelling
+                  ? "border border-rose-400/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/15"
+                  : "bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-950/30",
+              ].join(" ")}
+            >
+              {isUpdating ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : cancelling ? (
+                <XCircle className="h-4 w-4" />
+              ) : status === "COMPLETED" ? (
+                <CheckCircle2 className="h-4 w-4" />
               ) : (
-                <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm font-semibold text-slate-400">
-                  {order.orderStatus === "COMPLETED" ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-rose-400" />
-                  )}
-
-                  This order is {formatStatus(order.orderStatus)}.
-                </div>
+                <PackageCheck className="h-4 w-4" />
               )}
-            </footer>
+
+              {statusButtonLabels[status]}
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  ) : (
+    <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm font-semibold text-slate-400">
+      {order.orderStatus === "COMPLETED" ? (
+        <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+      ) : (
+        <XCircle className="h-5 w-5 text-rose-400" />
+      )}
+
+      This order is {formatStatus(order.orderStatus)}.
+    </div>
+  )}
+</footer>
           </motion.aside>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+     document.body,
   );
 }

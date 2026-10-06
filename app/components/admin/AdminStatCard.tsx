@@ -1,8 +1,13 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import type { LucideIcon } from "lucide-react";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+} from "lucide-react";
+
+import { useHydratedReducedMotion } from "@/hooks/useHydratedReducedMotion";
 
 type StatCardTone =
   | "indigo"
@@ -31,36 +36,38 @@ const toneStyles: Record<
     icon: string;
     glow: string;
     line: string;
+    chart: string;
   }
 > = {
   indigo: {
-    icon: "bg-indigo-500/15 text-indigo-300 ring-indigo-400/20",
-    glow: "bg-indigo-500/10",
-    line: "from-indigo-500 to-violet-500",
+    icon: "bg-orange-100 text-[#9a4214]",
+    glow: "bg-orange-200/50",
+    line: "stroke-[#da6c24]",
+    chart: "text-[#c65d1c]",
   },
-
   cyan: {
-    icon: "bg-cyan-500/15 text-cyan-300 ring-cyan-400/20",
-    glow: "bg-cyan-500/10",
-    line: "from-cyan-500 to-blue-500",
+    icon: "bg-cyan-100 text-cyan-700",
+    glow: "bg-cyan-200/45",
+    line: "stroke-cyan-500",
+    chart: "text-cyan-600",
   },
-
   emerald: {
-    icon: "bg-emerald-500/15 text-emerald-300 ring-emerald-400/20",
-    glow: "bg-emerald-500/10",
-    line: "from-emerald-500 to-teal-500",
+    icon: "bg-emerald-100 text-emerald-700",
+    glow: "bg-emerald-200/45",
+    line: "stroke-emerald-500",
+    chart: "text-emerald-600",
   },
-
   amber: {
-    icon: "bg-amber-500/15 text-amber-300 ring-amber-400/20",
-    glow: "bg-amber-500/10",
-    line: "from-amber-500 to-orange-500",
+    icon: "bg-amber-100 text-amber-700",
+    glow: "bg-amber-200/50",
+    line: "stroke-amber-500",
+    chart: "text-amber-600",
   },
-
   rose: {
-    icon: "bg-rose-500/15 text-rose-300 ring-rose-400/20",
-    glow: "bg-rose-500/10",
-    line: "from-rose-500 to-pink-500",
+    icon: "bg-rose-100 text-rose-700",
+    glow: "bg-rose-200/50",
+    line: "stroke-rose-500",
+    chart: "text-rose-600",
   },
 };
 
@@ -73,7 +80,7 @@ export default function AdminStatCard({
   index = 0,
   trend,
 }: AdminStatCardProps) {
-  const reduceMotion: boolean = useReducedMotion() ?? false;
+  const reduceMotion = useHydratedReducedMotion();
   const styles = toneStyles[tone];
 
   return (
@@ -83,8 +90,8 @@ export default function AdminStatCard({
           ? false
           : {
               opacity: 0,
-              y: 22,
-              scale: 0.97,
+              y: 18,
+              scale: 0.98,
             }
       }
       animate={{
@@ -93,40 +100,30 @@ export default function AdminStatCard({
         scale: 1,
       }}
       transition={{
-        delay: reduceMotion ? 0 : index * 0.07,
-        duration: 0.42,
+        delay: reduceMotion ? 0 : index * 0.06,
+        duration: 0.4,
         ease: "easeOut",
       }}
       whileHover={
         reduceMotion
           ? undefined
           : {
-              y: -5,
-              transition: {
-                duration: 0.2,
-              },
+              y: -4,
+              scale: 1.01,
             }
       }
-      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/65 p-5 shadow-xl shadow-black/10 backdrop-blur-xl sm:p-6"
+      className="group relative min-h-36 overflow-hidden rounded-2xl border border-[#ead9ca] bg-white/80 p-5 shadow-[0_12px_35px_rgba(104,55,24,0.08)] backdrop-blur-xl"
     >
       <div
-        aria-hidden="true"
         className={[
-          "pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full blur-3xl transition duration-500 group-hover:scale-125",
+          "pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full opacity-70 blur-3xl transition duration-500 group-hover:scale-125",
           styles.glow,
         ].join(" ")}
       />
 
-      <div
-        className={[
-          "absolute inset-x-0 top-0 h-px bg-gradient-to-r opacity-70",
-          styles.line,
-        ].join(" ")}
-      />
-
-      <div className="relative flex items-start justify-between gap-4">
+      <div className="relative flex h-full items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-400">
+          <p className="text-sm font-medium text-[#76675d]">
             {title}
           </p>
 
@@ -136,7 +133,7 @@ export default function AdminStatCard({
                 ? false
                 : {
                     opacity: 0,
-                    scale: 0.9,
+                    scale: 0.92,
                   }
             }
             animate={{
@@ -144,55 +141,82 @@ export default function AdminStatCard({
               scale: 1,
             }}
             transition={{
-              delay: reduceMotion ? 0 : 0.15 + index * 0.07,
-              duration: 0.35,
+              delay: reduceMotion
+                ? 0
+                : 0.12 + index * 0.06,
             }}
-            className="mt-3 text-3xl font-bold tracking-tight text-white"
+            className="mt-1 text-3xl font-extrabold tracking-tight text-[#23140d]"
           >
             {value}
           </motion.p>
 
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            {description}
-          </p>
-        </div>
+          {trend ? (
+            <div
+              className={[
+                "mt-3 inline-flex items-center gap-1 text-xs font-bold",
+                trend.positive
+                  ? "text-emerald-600"
+                  : "text-rose-600",
+              ].join(" ")}
+            >
+              {trend.positive ? (
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowDownRight className="h-3.5 w-3.5" />
+              )}
 
-        <motion.div
-          whileHover={
-            reduceMotion
-              ? undefined
-              : {
-                  rotate: -6,
-                  scale: 1.08,
-                }
-          }
-          className={[
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1",
-            styles.icon,
-          ].join(" ")}
-        >
-          <Icon className="h-6 w-6" />
-        </motion.div>
-      </div>
-
-      {trend && (
-        <div
-          className={[
-            "relative mt-5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-            trend.positive
-              ? "bg-emerald-500/10 text-emerald-300"
-              : "bg-rose-500/10 text-rose-300",
-          ].join(" ")}
-        >
-          {trend.positive ? (
-            <ArrowUpRight className="h-3.5 w-3.5" />
+              {trend.label}
+            </div>
           ) : (
-            <ArrowDownRight className="h-3.5 w-3.5" />
+            <p className="mt-3 max-w-32 text-xs leading-5 text-[#99887c]">
+              {description}
+            </p>
           )}
-
-          {trend.label}
         </div>
-      )}
+
+        <div className="flex flex-col items-end gap-3">
+          <motion.div
+            whileHover={
+              reduceMotion
+                ? undefined
+                : {
+                    rotate: -5,
+                    scale: 1.08,
+                  }
+            }
+            className={[
+              "flex h-12 w-12 items-center justify-center rounded-xl",
+              styles.icon,
+            ].join(" ")}
+          >
+            <Icon className="h-6 w-6" />
+          </motion.div>
+
+          <svg
+            viewBox="0 0 72 34"
+            className="h-8 w-16 overflow-visible opacity-80"
+            aria-hidden="true"
+          >
+            <path
+              d="M2 29C11 27 12 20 21 22C30 24 31 12 40 15C50 18 52 4 70 3"
+              fill="none"
+              className={styles.line}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            <path
+              d="M2 29C11 27 12 20 21 22C30 24 31 12 40 15C50 18 52 4 70 3"
+              fill="none"
+              className={styles.line}
+              strokeWidth="8"
+              strokeLinecap="round"
+              opacity="0.08"
+            />
+          </svg>
+        </div>
+      </div>
     </motion.article>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import {
   motion,
@@ -18,9 +18,15 @@ import {
 
 import { useHydratedReducedMotion } from "@/hooks/useHydratedReducedMotion";
 
-import AdminOrderDetailsDrawer from "./AdminOrderDetailsDrawer";
+const AdminOrderDetailsDrawer = dynamic(
+  () => import("./AdminOrderDetailsDrawer"),
+  {
+    ssr: false,
+  },
+);
 
-import {
+import {  
+  markManualPaymentPaid,
   updateAdminOrderStatus,
   type AdminOrderData,
   type AdminOrderStatus,
@@ -175,6 +181,11 @@ export default function AdminOrdersClient({
   const [updatingOrderId, setUpdatingOrderId] =
     useState<string | null>(null);
 
+  const [
+  updatingPaymentOrderId,
+  setUpdatingPaymentOrderId,
+] = useState<string | null>(null);  
+
   const [drawerError, setDrawerError] =
     useState<string | null>(null);
 
@@ -239,7 +250,7 @@ export default function AdminOrdersClient({
   }
 
   function closeOrder() {
-    if (updatingOrderId) {
+    if (updatingOrderId || updatingPaymentOrderId) {
       return;
     }
 
@@ -290,6 +301,50 @@ export default function AdminOrdersClient({
       setUpdatingOrderId(null);
     }
   }
+
+  async function handleMarkPaymentPaid() {
+  if (
+    !selectedOrder ||
+    updatingOrderId ||
+    updatingPaymentOrderId
+  ) {
+    return;
+  }
+
+  setUpdatingPaymentOrderId(selectedOrder.id);
+  setDrawerError(null);
+
+  try {
+    const response = await markManualPaymentPaid(
+      selectedOrder.id,
+    );
+
+    const updatedAt =
+      response.order.updatedAt ?? new Date().toISOString();
+
+    setOrders((currentOrders) => {
+      return currentOrders.map((order) => {
+        if (order.id !== selectedOrder.id) {
+          return order;
+        }
+
+        return {
+          ...order,
+          paymentStatus: response.order.paymentStatus,
+          updatedAt,
+        };
+      });
+    });
+  } catch (caughtError) {
+    setDrawerError(
+      caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to verify the payment.",
+    );
+  } finally {
+    setUpdatingPaymentOrderId(null);
+  }
+}
 
   return (
     <>
@@ -563,12 +618,14 @@ export default function AdminOrdersClient({
       </div>
 
       <AdminOrderDetailsDrawer
-        order={selectedOrder}
-        isUpdating={updatingOrderId !== null}
-        error={drawerError}
-        onClose={closeOrder}
-        onUpdateStatus={handleUpdateStatus}
-      />
+  order={selectedOrder}
+  isUpdating={updatingOrderId !== null}
+  isUpdatingPayment={updatingPaymentOrderId !== null}
+  error={drawerError}
+  onClose={closeOrder}
+  onUpdateStatus={handleUpdateStatus}
+  onMarkPaymentPaid={handleMarkPaymentPaid}
+/>
     </>
   );
 }

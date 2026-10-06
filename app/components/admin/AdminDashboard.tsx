@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   motion,
-  useReducedMotion,
   type Variants,
 } from "motion/react";
 import {
@@ -16,7 +15,10 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { useHydratedReducedMotion } from "@/hooks/useHydratedReducedMotion";
+
 import AdminStatCard from "./AdminStatCard";
+import { CoffeeBeansArtwork } from "./CoffeeArtwork";
 
 export type DashboardStatistics = {
   totalOrders: number;
@@ -50,7 +52,6 @@ function formatDate(dateValue: string): string {
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
-    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(dateValue));
@@ -73,48 +74,50 @@ function formatStatus(status: string): string {
 function getOrderStatusClasses(status: string): string {
   switch (status) {
     case "COMPLETED":
-      return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300";
+      return "bg-emerald-100 text-emerald-700";
 
     case "READY":
-      return "border-cyan-400/20 bg-cyan-500/10 text-cyan-300";
+      return "bg-sky-100 text-sky-700";
 
     case "PREPARING":
-      return "border-amber-400/20 bg-amber-500/10 text-amber-300";
+      return "bg-blue-100 text-blue-700";
 
     case "CANCELLED":
-      return "border-rose-400/20 bg-rose-500/10 text-rose-300";
+      return "bg-rose-100 text-rose-700";
+
+    case "ACCEPTED":
+      return "bg-violet-100 text-violet-700";
 
     default:
-      return "border-indigo-400/20 bg-indigo-500/10 text-indigo-300";
+      return "bg-orange-100 text-orange-700";
   }
 }
 
 function getPaymentStatusClasses(status: string): string {
   switch (status) {
     case "PAID":
-      return "bg-emerald-500/10 text-emerald-300";
+      return "bg-emerald-100 text-emerald-700";
 
     case "FAILED":
-      return "bg-rose-500/10 text-rose-300";
+      return "bg-rose-100 text-rose-700";
 
     case "CANCELLED":
-      return "bg-amber-500/10 text-amber-300";
+      return "bg-orange-100 text-orange-700";
 
     case "REFUNDED":
-      return "bg-violet-500/10 text-violet-300";
+      return "bg-slate-100 text-slate-600";
 
     default:
-      return "bg-slate-500/10 text-slate-400";
+      return "bg-amber-100 text-amber-700";
   }
 }
 
 const recentOrdersContainer: Variants = {
   hidden: {},
-
   visible: {
     transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.2,
+      staggerChildren: 0.05,
+      delayChildren: 0.15,
     },
   },
 };
@@ -122,15 +125,13 @@ const recentOrdersContainer: Variants = {
 const recentOrderItem: Variants = {
   hidden: {
     opacity: 0,
-    x: -16,
+    y: 10,
   },
-
   visible: {
     opacity: 1,
-    x: 0,
-
+    y: 0,
     transition: {
-      duration: 0.35,
+      duration: 0.32,
       ease: "easeOut",
     },
   },
@@ -142,20 +143,20 @@ export default function AdminDashboard({
   statistics,
   recentOrders,
 }: AdminDashboardProps) {
-  const reduceMotion: boolean = useReducedMotion() ?? false;
+  const reduceMotion = useHydratedReducedMotion();
 
   const firstName =
     adminName.trim().split(/\s+/)[0] || "Admin";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <motion.section
         initial={
           reduceMotion
             ? false
             : {
                 opacity: 0,
-                y: 18,
+                y: 16,
               }
         }
         animate={{
@@ -163,48 +164,50 @@ export default function AdminDashboard({
           y: 0,
         }}
         transition={{
-          duration: 0.45,
+          duration: 0.42,
           ease: "easeOut",
         }}
-        className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/15 via-slate-900/75 to-cyan-500/10 p-6 shadow-xl shadow-black/10 backdrop-blur-xl sm:p-8"
+        className="relative overflow-hidden rounded-3xl border border-[#e7d4c4] bg-[linear-gradient(120deg,rgba(255,253,250,0.96),rgba(255,242,228,0.88),rgba(227,178,137,0.62))] p-6 shadow-[0_18px_45px_rgba(99,51,22,0.10)] backdrop-blur-xl sm:p-7"
       >
         <motion.div
-          aria-hidden="true"
           animate={
             reduceMotion
               ? undefined
               : {
-                  x: [0, 30, 0],
-                  y: [0, -18, 0],
-                  scale: [1, 1.08, 1],
+                  x: [0, 12, 0],
+                  y: [0, -5, 0],
                 }
           }
           transition={{
-            duration: 8,
+            duration: 10,
             repeat: Number.POSITIVE_INFINITY,
             ease: "easeInOut",
           }}
-          className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full bg-indigo-500/20 blur-3xl"
-        />
+          className="pointer-events-none absolute -right-24 -top-20 h-72 w-[36rem] opacity-55"
+        >
+          <CoffeeBeansArtwork className="h-full w-full" />
+        </motion.div>
 
-        <div className="relative">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-300">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#fffaf5] via-[#fffaf5]/90 to-transparent" />
+
+        <div className="relative z-10 max-w-3xl">
+          <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#c05b1f]">
             {cafeName}
           </p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-[#2a160d] sm:text-4xl">
             Welcome back, {firstName}.
           </h2>
 
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#75665d] sm:text-base">
             Here is the latest overview of your cafe orders,
             payments and customer activity.
           </p>
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/admin/orders"
-              className="group inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 transition duration-200 hover:-translate-y-0.5 hover:bg-indigo-50"
+              className="group inline-flex items-center gap-2 rounded-xl bg-[#9c4517] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:-translate-y-0.5 hover:bg-[#7d3511]"
             >
               Manage orders
 
@@ -213,7 +216,7 @@ export default function AdminDashboard({
 
             <Link
               href="/admin/menu"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition duration-200 hover:-translate-y-0.5 hover:border-indigo-400/30 hover:bg-indigo-500/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#d9c3b2] bg-white/70 px-4 py-2.5 text-sm font-bold text-[#4a2818] transition hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50"
             >
               Manage menu
             </Link>
@@ -265,7 +268,7 @@ export default function AdminDashboard({
             ? false
             : {
                 opacity: 0,
-                y: 24,
+                y: 18,
               }
         }
         animate={{
@@ -273,26 +276,25 @@ export default function AdminDashboard({
           y: 0,
         }}
         transition={{
-          delay: reduceMotion ? 0 : 0.2,
-          duration: 0.45,
-          ease: "easeOut",
+          delay: reduceMotion ? 0 : 0.16,
+          duration: 0.42,
         }}
-        className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/65 shadow-xl shadow-black/10 backdrop-blur-xl"
+        className="overflow-hidden rounded-3xl border border-[#e7d8cc] bg-white/80 shadow-[0_16px_45px_rgba(93,48,21,0.09)] backdrop-blur-xl"
       >
-        <div className="flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex flex-col gap-4 border-b border-[#eee0d5] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-extrabold text-[#2b160d]">
               Recent orders
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[#88776c]">
               Latest orders received by {cafeName}.
             </p>
           </div>
 
           <Link
             href="/admin/orders"
-            className="group inline-flex items-center gap-2 text-sm font-semibold text-indigo-300 transition hover:text-indigo-200"
+            className="group inline-flex items-center gap-2 text-sm font-bold text-[#ad4c17] transition hover:text-[#7d3511]"
           >
             View all orders
 
@@ -301,30 +303,16 @@ export default function AdminDashboard({
         </div>
 
         {recentOrders.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <motion.div
-              animate={
-                reduceMotion
-                  ? undefined
-                  : {
-                      y: [0, -7, 0],
-                    }
-              }
-              transition={{
-                duration: 2.5,
-                repeat: Number.POSITIVE_INFINITY,
-                ease: "easeInOut",
-              }}
-              className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-300"
-            >
-              <ShoppingBag className="h-7 w-7" />
-            </motion.div>
+          <div className="px-6 py-14 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+              <ShoppingBag className="h-6 w-6" />
+            </div>
 
-            <h3 className="mt-5 font-semibold text-white">
+            <h3 className="mt-4 font-bold text-[#2b160d]">
               No orders yet
             </h3>
 
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-[#88776c]">
               New customer orders will appear here.
             </p>
           </div>
@@ -337,28 +325,30 @@ export default function AdminDashboard({
             }
             initial={reduceMotion ? false : "hidden"}
             animate={reduceMotion ? undefined : "visible"}
-            className="divide-y divide-white/10"
+            className="divide-y divide-[#eee0d5]"
           >
             {recentOrders.map((order) => (
               <motion.div
                 key={order.id}
                 variants={
-                  reduceMotion ? undefined : recentOrderItem
+                  reduceMotion
+                    ? undefined
+                    : recentOrderItem
                 }
-                className="group grid gap-4 px-5 py-5 transition hover:bg-white/[0.025] sm:px-6 lg:grid-cols-[1fr_0.65fr_0.9fr_auto] lg:items-center"
+                className="group grid gap-4 px-5 py-4 transition hover:bg-orange-50/65 sm:px-6 lg:grid-cols-[1.2fr_0.65fr_0.9fr_auto] lg:items-center"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300 transition group-hover:scale-105 group-hover:bg-indigo-500/20">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-orange-200 text-[#a94917]">
                       <UserRound className="h-5 w-5" />
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-white">
+                      <p className="truncate font-bold text-[#2b160d]">
                         {order.customerName}
                       </p>
 
-                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                      <p className="mt-0.5 truncate text-xs text-[#918075]">
                         #{getShortOrderId(order.id)} ·{" "}
                         {formatDate(order.createdAt)}
                       </p>
@@ -367,15 +357,15 @@ export default function AdminDashboard({
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#99887c]">
                     Order total
                   </p>
 
-                  <p className="mt-1 font-bold text-white">
+                  <p className="mt-1 font-extrabold text-[#24130c]">
                     {formatCurrency(order.totalAmount)}
                   </p>
 
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="mt-1 text-xs text-[#99887c]">
                     {formatStatus(order.paymentMethod)}
                   </p>
                 </div>
@@ -383,7 +373,7 @@ export default function AdminDashboard({
                 <div className="flex flex-wrap gap-2">
                   <span
                     className={[
-                      "rounded-full border px-2.5 py-1 text-xs font-semibold",
+                      "rounded-full px-3 py-1 text-xs font-bold",
                       getOrderStatusClasses(order.orderStatus),
                     ].join(" ")}
                   >
@@ -392,7 +382,7 @@ export default function AdminDashboard({
 
                   <span
                     className={[
-                      "rounded-full px-2.5 py-1 text-xs font-semibold",
+                      "rounded-full px-3 py-1 text-xs font-bold",
                       getPaymentStatusClasses(
                         order.paymentStatus,
                       ),
@@ -406,7 +396,7 @@ export default function AdminDashboard({
                   href={`/admin/orders?order=${encodeURIComponent(
                     order.id,
                   )}`}
-                  className="inline-flex items-center justify-center rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-indigo-400/30 hover:bg-indigo-500/10 hover:text-white"
+                  className="inline-flex items-center justify-center rounded-xl border border-[#dfcbbb] bg-white px-3 py-2 text-sm font-bold text-[#6f3416] transition hover:border-orange-400 hover:bg-orange-50"
                 >
                   Details
                 </Link>
